@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Redstore | Advanced Python Ecommerce{% endblock %}
+{% block header_class %}header{% endblock %}
+
+{% block header_content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-2">
+                <h1>Advanced Ecommerce,<br>Built the Pythonic Way.</h1>
+                <p>Redstore now behaves like a serious backend-led ecommerce project: structured catalog, cart, checkout, wishlist, reviews, account security, support chat, APIs, and recommendation analytics.</p>
+                <a href="{% url 'store:catalog' %}" class="btn">Explore Catalog &#8594;</a>
+            </div>
+            <div class="col-2">
+                <img src="{% static 'images/image1.png' %}" alt="Redstore hero">
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="categories">
+        <div class="small-container">
+            <div class="row">
+                <div class="col-3">
+                    <img src="{% static 'images/category-1.jpg' %}" alt="Apparel">
+                </div>
+                <div class="col-3">
+                    <img src="{% static 'images/category-2.jpg' %}" alt="Electronics">
+                </div>
+                <div class="col-3">
+                    <img src="{% static 'images/category-3.jpg' %}" alt="Accessories">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="small-container">
+        <h2 class="title">Featured Products</h2>
+        <div class="row">
+            {% for item in featured_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <span class="product-badge">{{ item.brand_name }}</span>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.short_description }}</p>
+                    <div class="meta-line">
+                        <span>{{ item.category_name }}</span>
+                        <span>{{ item.average_rating }}/5</span>
+                    </div>
+                    <div class="price-line">
+                        {% if item.has_discount %}
+                            <span class="old-price">${{ item.price|floatformat:2 }}</span>
+                        {% endif %}
+                        <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <h3>No products yet</h3>
+                    <p>Run migrations and seed data to populate the store.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <h2 class="title">Trending by Demand Score</h2>
+        <div class="row">
+            {% for item in trending_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.short_description }}</p>
+                    <div class="meta-line">
+                        <span>{{ item.inventory_status }}</span>
+                        <span>{{ item.sold_units }} sold</span>
+                    </div>
+                    <div class="price-line">
+                        <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="offer">
+        <div class="small-container">
+            <div class="row">
+                <div class="col-2">
+                    <img src="{% static 'images/exclusive.png' %}" alt="Exclusive offer" class="offer-img">
+                </div>
+                <div class="col-2">
+                    <p>Intelligence Layer</p>
+                    <h1>Recommendation + Analytics Engine</h1>
+                    <small>Instead of relying on modern LLM tooling, this project uses classical Python recommendation logic, ranked search, support-answer retrieval, demand scoring, and customer segmentation that fit a strong 2022 academic or portfolio build.</small>
+                    <a href="{% url 'store:insights' %}" class="btn">View Insights &#8594;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="small-container">
+        <h2 class="title">Top Rated Products</h2>
+        <div class="row">
+            {% for item in top_rated_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.review_count }} verified reviews</p>
+                    <div class="price-line">
+                        <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if customer_segment %}
+            <div class="segment-card">
+                <p class="segment-eyebrow">Personalized Segment</p>
+                <h3>{{ customer_segment.label }}</h3>
+                <p>{{ customer_segment.summary }}</p>
+            </div>
+        {% endif %}
+
+        {% if customer_health %}
+            <div class="segment-card">
+                <p class="segment-eyebrow">Retention Signal</p>
+                <h3>{{ customer_health.retention_score }}/100 retention score</h3>
+                <p>{{ customer_health.summary }}</p>
+                <small>{{ customer_health.next_best_action }}</small>
+            </div>
+        {% endif %}
+
+        {% if recently_viewed_items %}
+            <h2 class="title">Recently Viewed</h2>
+            <div class="row">
+                {% for item in recently_viewed_items %}
+                    <div class="col-4">
+                        <a href="{{ item.get_absolute_url }}">
+                            <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        </a>
+                        <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                        <p>{{ item.short_description }}</p>
+                        <div class="price-line">
+                            <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

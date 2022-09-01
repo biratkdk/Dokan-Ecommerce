@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="wisth=device-width , initial-scale=1.0">
+        <title> All Products - Redstore
+        </title>
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    </head>
+    <body>
+            <div class="container">
+                <div class="navbar">
+                    <div class="logo">
+                        <img src="../static/images/dlogo3.png" width="135px">
+                    </div>
+                    <nav>
+                        <ul id="MenuItems">
+                            <li><a href="/">Home</a></li>
+                            <li><a href="Products">Product</a></li>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Contact</a></li>
+                            <li><a href="account">Account</a></li>
+                        </ul>
+                    </nav>
+                    <img src="../static/images/cart.png" width="30px" height="30px">
+                    <img src="../static/images/menu.png" class="menu-icon" onclick="menutoggle()">
+                </div>
+            </div>
+     
+     
+        <div class="small-container">
+        <div class="row row-2">
+            <h2>All Products</h2>
+            <select>
+                <option>Default Shorting</option>
+                <option>Short by Price</option>
+                <option>Short by Popularity</option>
+                <option>Short by Rating</option>
+                <option>Short by Sales</option>
+            </select>
+        </div>
+            <div class="row">
+                <div class="col-4">
+                    <img src="../static/images4/Men SD0323 Sneakers.jpg">
+                    <h4>Red Printed T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$50.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/AIr Jordan 1 Dark Mocha.jpg">
+                    <h4>HRX Shoe</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$250.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/AIr Jordan 1 High Heirloom.jpg">
+                    <h4> Gray Trouser</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$75.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/AMBUSH X Nike Air Adjust Force Orange and Blue.jpg">
+                    <h4>Puma Blue T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$45.00</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">
+                    <img src="../static/images5/Jordan two trey.jpg">
+                    <h4>Red Printed T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$50.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike  Dunk High Blue Chill.jpg">
+                    <h4>HRX Shoe</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$250.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike AIR force 1 07'.jpg">
+                    <h4> Gray Trouser</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$75.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike AIR force 1 CHILL PAPER 1.jpg">
+                    <h4>Puma Blue T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$45.00</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">
+                    <img src="../static/images5/Nike Air Force 1 Low.jpg">
+                    <h4>Red Printed T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$50.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike Air Max 97 koi.jpg">
+                    <h4>HRX Shoe</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$250.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike Blazer Mid World Champ.jpg">
+                    <h4> Gray Trouser</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-o"></i>
+                    </div>
+                    <p>$75.00</p>
+                </div>
+                <div class="col-4">
+                    <img src="../static/images5/Nike Dunk High Inspected By woosh.jpg">
+                    <h4>Puma Blue T-shirt</h4>
+                    <div class="rating">
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star"></i>
+                        <i class="fa fa-star-half-o"></i>
+                    </div>
+                    <p>$45.00</p>
+                </div>
+            </div>
+
+
+            <div class="page-btn">
+                <span ><a href="products" class="ml-2">1</a></span>
+                <span ><a href="products2" class="ml-2">2</a></span>
+                <span ><a href="products3" class="ml-2">3</a></span>
+                <span ><a href="products4" class="ml-2">4</a></span>
+                <span ><a href="products5" class="ml-2">5</a></span>
+                <span ><a href="products6" class="ml-2">6</a></span>
+                <span ><a href="products7" class="ml-2">7</a></span>
+                <span ><a href="products8" class="ml-2">8</a></span>
+                <span>&#8594;</span>
+            </div>
+            
+        </div>
+
+
+            <!-----------footer--------->
+            <div class="footer">
+                <div class="container">
+                    <div class="row">
+                        <div class="footer-col-1">
+                            <h3>Download Our App</h3>
+                            <p>Download App On Andriod and ios monile phone.</p>
+                            <div class="app-logo">
+                                <img src="../static/images/play-store.png">
+                                <img src="../static/images/app-store.png">
+                            </div>
+                        </div>
+                        <div class="footer-col-2">
+                            <img src="../static/images/download.png">
+                            <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Dicta nobis, dolore doloribus a tenetur aut nesciunt, ut sint odit, est ullam molestiae asperiores! Quas nulla itaque facere ea, magni iste!</p>
+                        </div>
+                        <div class="footer-col-3">
+                            <h3>Useful Links</h3>
+                            <ul>
+                                <li>Coupons</li>
+                                <li>Blog Post</li>
+                                <li>Retutn Policy</li>
+                                <li>Join affilate</li>
+                            </ul>
+                           
+                        </div>
+                        <div class="footer-col-4">
+                            <h3>Social Links</h3>
+                            <ul>
+                                <li>Facebook</li>
+                                <li>Instagram</li>
+                                <li>Twitter</li>
+                                <li>Youtube</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="copyright">Copyright 2020 - Birat Khadka</p>
+                </div>
+            </div>
+<!-------------js -->
+<script>
+    var MenuItems = document.getElementById("MenuItems");
+
+    MenuItems.style.maxHeight = "0px";
+
+    function menutoggle(){
+        if(MenuItems.style.maxHeight == "0px")
+            {
+                MenuItems.style.maxHeight = "200px";
+            }
+        else
+            {
+                MenuItems.style.maxHeight = "0px";
+            }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+Hello {{ user.username }},
+
+Verify your Redstore account email to unlock the full 2022-style account security flow.
+
+Verification link:
+{{ verification_url }}
+
+If you did not create this account, you can ignore this message.

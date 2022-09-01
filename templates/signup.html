@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | Redstore{% endblock %}
+
+{% block content %}
+    <section class="auth-section">
+        <div class="auth-card">
+            <h2>Create Account</h2>
+            <p class="auth-copy">Register once and keep your shopping flow fully inside the Django app, with email verification and account activity tracking.</p>
+            <form method="post" class="auth-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div>
+                    {{ form.username.label_tag }}
+                    {{ form.username }}
+                    {{ form.username.errors }}
+                </div>
+                <div>
+                    {{ form.email.label_tag }}
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+                <div>
+                    {{ form.password1.label_tag }}
+                    {{ form.password1 }}
+                    {{ form.password1.errors }}
+                </div>
+                <div>
+                    {{ form.password2.label_tag }}
+                    {{ form.password2 }}
+                    {{ form.password2.errors }}
+                </div>
+                <button type="submit" class="btn auth-submit">Signup</button>
+            </form>
+            <p class="auth-footer">Already registered? <a href="{% url 'store:login' %}">Login</a></p>
+        </div>
+    </section>
+{% endblock %}

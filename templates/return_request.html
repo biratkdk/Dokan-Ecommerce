@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Request Return | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Request Return</h2>
+        <div class="checkout-grid">
+            <div class="checkout-card">
+                <h3>Return Details</h3>
+                <p>Order: {{ order.reference }}</p>
+                <p>Product: {{ order_item.item.title }}</p>
+                <p>Delivered quantity: {{ order_item.quantity }}</p>
+
+                <form method="post" class="auth-form">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="form-errors">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <div class="field-group">{{ form.quantity.label_tag }}{{ form.quantity }}{{ form.quantity.errors }}</div>
+                    <div class="field-group">{{ form.reason.label_tag }}{{ form.reason }}{{ form.reason.errors }}</div>
+                    <div class="field-group">{{ form.details.label_tag }}{{ form.details }}{{ form.details.errors }}</div>
+                    <button type="submit" class="btn compact-btn">Submit Return Request</button>
+                </form>
+            </div>
+
+            <aside class="summary-card">
+                <h3>Previous Requests</h3>
+                {% if existing_return_requests %}
+                    <div class="return-stack">
+                        {% for return_request in existing_return_requests %}
+                            <div class="return-card">
+                                <strong>{{ return_request.get_status_display }}</strong>
+                                <p>{{ return_request.get_reason_display }}</p>
+                                {% if return_request.details %}
+                                    <p>{{ return_request.details }}</p>
+                                {% endif %}
+                                {% if return_request.resolution_note %}
+                                    <p>Resolution: {{ return_request.resolution_note }}</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No return requests have been submitted for this line item.</p>
+                {% endif %}
+            </aside>
+        </div>
+    </div>
+{% endblock %}

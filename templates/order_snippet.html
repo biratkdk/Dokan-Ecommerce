@@ -1,0 +1,28 @@
+<aside class="summary-card">
+    <h3>Order Summary</h3>
+    {% if order and order.total_items %}
+        <ul class="summary-list">
+            {% for order_item in order.items.all %}
+                <li>
+                    <span>{{ order_item.item.title }} x {{ order_item.quantity }}</span>
+                    <strong>${{ order_item.total_price|floatformat:2 }}</strong>
+                </li>
+            {% endfor %}
+        </ul>
+        <div class="summary-breakdown">
+            <div><span>Subtotal</span><strong>${{ order.subtotal|floatformat:2 }}</strong></div>
+            <div><span>Discount</span><strong>${{ order.coupon_discount|floatformat:2 }}</strong></div>
+            <div><span>Shipping</span><strong>${{ order.shipping_total|floatformat:2 }}</strong></div>
+            <div><span>Tax</span><strong>${{ order.tax_total|floatformat:2 }}</strong></div>
+        </div>
+        <div class="summary-total">
+            <span>Total</span>
+            <strong>${{ order.total|floatformat:2 }}</strong>
+        </div>
+        {% if order.coupon %}
+            <p class="coupon-note">Coupon: {{ order.coupon.code }}</p>
+        {% endif %}
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+</aside>

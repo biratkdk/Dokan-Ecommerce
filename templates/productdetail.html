@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ item.title }} | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container single-product">
+        <div class="row">
+            <div class="col-2">
+                <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                <div class="small-img-row">
+                    {% for image in item.gallery_images|slice:":4" %}
+                        <div class="small-img-col">
+                            <img src="{% static image %}" alt="{{ item.title }}">
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-2">
+                <p>{{ item.category_name }} / {{ item.brand_name }}</p>
+                <h1>{{ item.title }}</h1>
+                <div class="meta-line detail-meta-line">
+                    <span>SKU: {{ item.sku }}</span>
+                    <span>{{ item.average_rating }}/5 from {{ item.review_count }} reviews</span>
+                </div>
+                <div class="price-line detail-price-line">
+                    {% if item.has_discount %}
+                        <span class="old-price">${{ item.price|floatformat:2 }}</span>
+                    {% endif %}
+                    <h4>${{ item.unit_price|floatformat:2 }}</h4>
+                </div>
+                <p>{{ item.short_description }}</p>
+                <p class="stock-note">{{ item.inventory_status }} • {{ item.stock }} units available</p>
+                <form method="post" action="{% url 'store:add-to-cart' item.slug %}" class="quantity-form">
+                    {% csrf_token %}
+                    {{ cart_form.quantity }}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="btn">Add To Cart</button>
+                </form>
+                {% if request.user.is_authenticated %}
+                    <form method="post" action="{% url 'store:toggle-wishlist' item.slug %}" class="wishlist-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="secondary-chip">{% if is_in_wishlist %}Remove from Wishlist{% else %}Add to Wishlist{% endif %}</button>
+                    </form>
+                {% endif %}
+                <form method="post" action="{% url 'store:toggle-compare' item.slug %}" class="wishlist-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="secondary-chip">{% if is_in_compare %}Remove from Compare{% else %}Add to Compare{% endif %}</button>
+                </form>
+                <h3>Product Details <i class="fa fa-indent"></i></h3>
+                <br>
+                <p>{{ item.description }}</p>
+                {% if item.attributes %}
+                    <div class="attribute-grid">
+                        {% for key, value in item.attributes.items %}
+                            <div class="attribute-item">
+                                <span>{{ key|title }}</span>
+                                <strong>{{ value }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="small-container">
+        <div class="row row-2">
+            <h2>Recommended With This Product</h2>
+            <a href="{% url 'store:catalog' %}">View More</a>
+        </div>
+        <div class="row">
+            {% for recommendation in recommendations %}
+                <div class="col-4">
+                    <a href="{{ recommendation.item.get_absolute_url }}">
+                        <img src="{% static recommendation.item.primary_image %}" alt="{{ recommendation.item.title }}">
+                    </a>
+                    <a href="{{ recommendation.item.get_absolute_url }}"><h4>{{ recommendation.item.title }}</h4></a>
+                    <p>{{ recommendation.score }} recommendation score</p>
+                    <p class="recommendation-reason">{{ recommendation.reasons|join:", " }}</p>
+                    <div class="price-line">
+                        <span class="current-price">${{ recommendation.item.unit_price|floatformat:2 }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <p>No recommendations are available yet.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="small-container review-section">
+        <div class="row row-2">
+            <h2>Customer Reviews</h2>
+        </div>
+        <div class="review-layout">
+            <div>
+                {% for review in reviews %}
+                    <div class="review-card">
+                        <div class="review-header">
+                            <strong>{{ review.title }}</strong>
+                            <span>{{ review.rating }}/5</span>
+                        </div>
+                        <p>{{ review.comment }}</p>
+                        <p class="review-meta">{{ review.user.username }}{% if review.verified_purchase %} • Verified purchase{% endif %}</p>
+                    </div>
+                {% empty %}
+                    <div class="empty-state">
+                        <p>No reviews yet.</p>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if request.user.is_authenticated %}
+                <div class="review-form-card">
+                    <h3>Write a Review</h3>
+                    <form method="post" action="{% url 'store:submit-review' item.slug %}">
+                        {% csrf_token %}
+                        <div class="field-group">{{ review_form.rating.label_tag }}{{ review_form.rating }}{{ review_form.rating.errors }}</div>
+                        <div class="field-group">{{ review_form.title.label_tag }}{{ review_form.title }}{{ review_form.title.errors }}</div>
+                        <div class="field-group">{{ review_form.comment.label_tag }}{{ review_form.comment }}{{ review_form.comment.errors }}</div>
+                        <button type="submit" class="btn compact-btn">Save Review</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if recently_viewed_items %}
+        <div class="small-container">
+            <div class="row row-2">
+                <h2>Recently Viewed</h2>
+                <a href="{% url 'store:compare' %}">Open Compare</a>
+            </div>
+            <div class="row">
+                {% for recent_item in recently_viewed_items %}
+                    <div class="col-4">
+                        <a href="{{ recent_item.get_absolute_url }}">
+                            <img src="{% static recent_item.primary_image %}" alt="{{ recent_item.title }}">
+                        </a>
+                        <a href="{{ recent_item.get_absolute_url }}"><h4>{{ recent_item.title }}</h4></a>
+                        <p>{{ recent_item.short_description }}</p>
+                        <div class="price-line">
+                            <span class="current-price">${{ recent_item.unit_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <h2>Account Dashboard</h2>
+            <a href="{% url 'store:support-threads' %}" class="btn compact-btn">Open Support</a>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Security</p>
+                <h3>Email Verification</h3>
+                <p>
+                    {% if profile.email_verified %}
+                        Verified{% if profile.email_verified_at %} on {{ profile.email_verified_at|date:"M d, Y" }}{% endif %}
+                    {% else %}
+                        Not verified yet
+                    {% endif %}
+                </p>
+                <p>Preferred contact: {{ profile.get_preferred_contact_channel_display }}</p>
+                <p>Marketing opt-in: {% if profile.marketing_opt_in %}Enabled{% else %}Disabled{% endif %}</p>
+                {% if not profile.email_verified %}
+                    <form method="post" action="{% url 'store:resend-verification-email' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'store:account-dashboard' %}">
+                        <button type="submit" class="btn compact-btn">Resend Verification Email</button>
+                    </form>
+                {% endif %}
+            </section>
+
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Customer Intelligence</p>
+                {% if customer_segment %}
+                    <h3>{{ customer_segment.label }}</h3>
+                    <p>{{ customer_segment.summary }}</p>
+                {% endif %}
+                {% if customer_health %}
+                    <p><strong>{{ customer_health.retention_score }}/100</strong> retention score</p>
+                    <p>Churn risk: {{ customer_health.churn_risk|title }}</p>
+                    <p>{{ customer_health.next_best_action }}</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Recent Login Activity</p>
+                {% if recent_logins %}
+                    <div class="dashboard-list">
+                        {% for activity in recent_logins %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ activity.get_status_display }}</strong>
+                                <span>{{ activity.created_at|date:"M d, Y H:i" }}</span>
+                                <p>{{ activity.ip_address|default:"Unknown IP" }}</p>
+                                <small>{{ activity.user_agent|default:"No user agent captured" }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No login activity recorded yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Support Conversations</p>
+                {% if support_threads %}
+                    <div class="dashboard-list">
+                        {% for thread in support_threads %}
+                            <a href="{% url 'store:support-thread-detail' thread.id %}" class="dashboard-list-card dashboard-link-card">
+                                <strong>{{ thread.subject }}</strong>
+                                <span>{{ thread.get_status_display }} • {{ thread.get_priority_display }}</span>
+                                <p>{{ thread.get_category_display }}</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No support conversations yet.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Recent Notifications</p>
+                {% if recent_notifications %}
+                    <div class="dashboard-list">
+                        {% for notification in recent_notifications %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ notification.get_kind_display }}</strong>
+                                <span>{{ notification.get_delivery_state_display }}</span>
+                                <p>{{ notification.subject }}</p>
+                                <small>{{ notification.created_at|date:"M d, Y H:i" }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No email notifications logged yet.</p>
+                {% endif %}
+            </section>
+
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Recent Orders</p>
+                {% if recent_orders %}
+                    <div class="dashboard-list">
+                        {% for order in recent_orders %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ order.reference }}</strong>
+                                <span>{{ order.get_status_display }} • {{ order.get_payment_status_display }}</span>
+                                <p>${{ order.total|floatformat:2 }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No completed orders yet.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+{% endblock %}

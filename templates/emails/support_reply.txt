@@ -1,0 +1,10 @@
+Hello {{ user.username }},
+
+Redstore support posted a new reply on your conversation:
+{{ thread.subject }}
+
+Latest reply:
+{{ message.message }}
+
+Open the conversation here:
+{{ thread_url }}

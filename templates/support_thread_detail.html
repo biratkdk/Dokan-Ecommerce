@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Support Thread | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <h2>{{ thread.subject }}</h2>
+            <a href="{% url 'store:support-threads' %}" class="btn compact-btn">Back to Support</a>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Conversation Status</p>
+                <h3>{{ thread.get_status_display }}</h3>
+                <p>{{ thread.get_category_display }} • {{ thread.get_priority_display }}</p>
+                {% if thread.order %}
+                    <p>Linked order: {{ thread.order.reference }}</p>
+                {% endif %}
+                {% if thread.status != "resolved" and thread.status != "closed" %}
+                    <form method="post" action="{% url 'store:support-thread-resolve' thread.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'store:support-thread-detail' thread.id %}">
+                        <button type="submit" class="secondary-chip">Mark Resolved</button>
+                    </form>
+                {% endif %}
+            </section>
+
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Suggested Articles</p>
+                {% if suggested_articles %}
+                    <div class="dashboard-list">
+                        {% for article in suggested_articles %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ article.title }}</strong>
+                                <span>{{ article.confidence }} confidence</span>
+                                <p>{{ article.answer }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No assistant suggestions are attached to this thread yet.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <section class="dashboard-panel">
+            <p class="segment-eyebrow">Messages</p>
+            <div class="chat-stack">
+                {% for message in thread.messages.all %}
+                    <article class="chat-message {% if message.sender_role == 'support' %}chat-message-support{% elif message.sender_role == 'system' %}chat-message-system{% else %}chat-message-customer{% endif %}">
+                        <header>
+                            <strong>{{ message.author.username|default:"System" }}</strong>
+                            <span>{{ message.get_sender_role_display }} • {{ message.created_at|date:"M d, Y H:i" }}</span>
+                        </header>
+                        <p>{{ message.message }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="dashboard-panel">
+            <h3>Add Reply</h3>
+            <form method="post" class="checkout-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div>
+                    {{ form.message.label_tag }}
+                    {{ form.message }}
+                    {{ form.message.errors }}
+                </div>
+                <button type="submit" class="btn compact-btn">Send Message</button>
+            </form>
+        </section>
+    </div>
+{% endblock %}

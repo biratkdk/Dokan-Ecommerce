@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Store Insights | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Store Intelligence Dashboard</h2>
+
+        {% if customer_segment %}
+            <div class="segment-card">
+                <p class="segment-eyebrow">Customer Segment</p>
+                <h3>{{ customer_segment.label }}</h3>
+                <p>{{ customer_segment.summary }}</p>
+                <small>Confidence: {{ customer_segment.confidence }}</small>
+            </div>
+        {% endif %}
+
+        {% if customer_health %}
+            <div class="segment-card">
+                <p class="segment-eyebrow">Customer Health</p>
+                <h3>{{ customer_health.retention_score }}/100 retention score</h3>
+                <p>Churn risk: {{ customer_health.churn_risk|title }}</p>
+                <small>{{ customer_health.next_best_action }}</small>
+            </div>
+        {% endif %}
+
+        {% if personalized_recommendations %}
+            <div class="row row-2">
+                <h2>Personalized Recommendations</h2>
+            </div>
+            <div class="row">
+                {% for recommendation in personalized_recommendations %}
+                    <div class="col-4">
+                        <a href="{{ recommendation.item.get_absolute_url }}">
+                            <img src="{% static recommendation.item.primary_image %}" alt="{{ recommendation.item.title }}">
+                        </a>
+                        <a href="{{ recommendation.item.get_absolute_url }}"><h4>{{ recommendation.item.title }}</h4></a>
+                        <p>{{ recommendation.score }} score</p>
+                        <p class="recommendation-reason">{{ recommendation.reasons|join:", " }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="row row-2">
+            <h2>Trending Products</h2>
+        </div>
+        <div class="row">
+            {% for item in trending_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.sold_units }} sold • {{ item.wishlist_count }} wishlists</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="row row-2">
+            <h2>Top Rated Products</h2>
+        </div>
+        <div class="row">
+            {% for item in top_rated_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.average_rating }}/5 • {{ item.review_count }} reviews</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="row row-2">
+            <h2>Low Stock Alerts</h2>
+        </div>
+        <div class="row">
+            {% for item in low_stock_items %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>{{ item.stock }} left • Reorder at {{ item.reorder_level }}</p>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <p>No low stock alerts right now.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="row row-2">
+            <h2>Value Picks</h2>
+        </div>
+        <div class="row">
+            {% for item in value_picks %}
+                <div class="col-4">
+                    <a href="{{ item.get_absolute_url }}">
+                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                    </a>
+                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                    <p>Now ${{ item.unit_price|floatformat:2 }}{% if item.has_discount %} from ${{ item.price|floatformat:2 }}{% endif %}</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

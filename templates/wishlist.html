@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Wishlist | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Your Wishlist</h2>
+        {% if wishlist_entries %}
+            <div class="row">
+                {% for entry in wishlist_entries %}
+                    <div class="col-4">
+                        <a href="{{ entry.item.get_absolute_url }}">
+                            <img src="{% static entry.item.primary_image %}" alt="{{ entry.item.title }}">
+                        </a>
+                        <span class="product-badge">{{ entry.item.brand_name }}</span>
+                        <a href="{{ entry.item.get_absolute_url }}"><h4>{{ entry.item.title }}</h4></a>
+                        <p>{{ entry.item.short_description }}</p>
+                        <div class="price-line">
+                            <span class="current-price">${{ entry.item.unit_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="card-actions">
+                            <form method="post" action="{% url 'store:add-to-cart' entry.item.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <input type="hidden" name="next" value="{% url 'store:wishlist' %}">
+                                <button type="submit" class="btn compact-btn">Add to Cart</button>
+                            </form>
+                            <form method="post" action="{% url 'store:toggle-wishlist' entry.item.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'store:wishlist' %}">
+                                <button type="submit" class="secondary-chip">Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>Your wishlist is empty</h3>
+                <p>Save products here before you buy them.</p>
+                <a href="{% url 'store:catalog' %}" class="btn">Browse products</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

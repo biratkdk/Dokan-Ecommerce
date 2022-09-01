@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Support | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <h2>Support Conversations</h2>
+            <p>Open a ticket-style chat with order context and classical support suggestions.</p>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Open New Conversation</h3>
+                <form method="post" class="checkout-form">
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+                    <div class="checkout-grid">
+                        <div>
+                            {{ form.subject.label_tag }}
+                            {{ form.subject }}
+                            {{ form.subject.errors }}
+                        </div>
+                        <div>
+                            {{ form.order.label_tag }}
+                            {{ form.order }}
+                            {{ form.order.errors }}
+                        </div>
+                        <div>
+                            {{ form.category.label_tag }}
+                            {{ form.category }}
+                            {{ form.category.errors }}
+                        </div>
+                        <div>
+                            {{ form.priority.label_tag }}
+                            {{ form.priority }}
+                            {{ form.priority.errors }}
+                        </div>
+                    </div>
+                    <div>
+                        {{ form.message.label_tag }}
+                        {{ form.message }}
+                        {{ form.message.errors }}
+                    </div>
+                    <button type="submit" class="btn compact-btn">Create Support Thread</button>
+                </form>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Active Threads</h3>
+                {% if support_threads %}
+                    <div class="dashboard-list">
+                        {% for thread in support_threads %}
+                            <a href="{% url 'store:support-thread-detail' thread.id %}" class="dashboard-list-card dashboard-link-card">
+                                <strong>{{ thread.subject }}</strong>
+                                <span>{{ thread.get_status_display }} • {{ thread.get_priority_display }}</span>
+                                <p>{{ thread.get_category_display }}{% if thread.order %} • Order {{ thread.order.reference }}{% endif %}</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No support threads yet.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+{% endblock %}

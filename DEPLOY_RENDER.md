@@ -64,7 +64,7 @@ If you do not set SMTP values, the project still deploys, but emails will use th
 These are already configured:
 
 - Build: `bash build.sh`
-- Start: `python -m gunicorn redstore.asgi:application -k uvicorn.workers.UvicornWorker`
+- Start: `python -m gunicorn redstore.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
 
 ## After first deploy
 

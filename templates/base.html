@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Redstore{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header {% block header_class %}{% endblock %}">
+        <div class="container">
+            <div class="navbar">
+                <div class="logo">
+                    <a href="{% url 'store:home' %}">
+                        <img src="{% static 'images/dlogo3.png' %}" alt="Redstore logo" width="135">
+                    </a>
+                </div>
+                <nav>
+                    <ul id="MenuItems">
+                        <li><a href="{% url 'store:home' %}">Home</a></li>
+                        <li><a href="{% url 'store:catalog' %}">Products</a></li>
+                        <li><a href="{% url 'store:compare' %}">Compare</a></li>
+                        <li><a href="{% url 'store:insights' %}">Insights</a></li>
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'store:account-dashboard' %}">Dashboard</a></li>
+                            <li><a href="{% url 'store:wishlist' %}">Wishlist</a></li>
+                            <li><a href="{% url 'store:support-threads' %}">Support</a></li>
+                            <li><a href="{% url 'store:order-history' %}">Orders</a></li>
+                            <li><a href="{% url 'store:logout' %}">Logout</a></li>
+                        {% else %}
+                            <li><a href="{% url 'store:login' %}">Account</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <a href="{% url 'store:cart' %}" class="cart-link" aria-label="View cart">
+                    <img src="{% static 'images/cart.png' %}" alt="Cart" width="30" height="30">
+                    <span class="cart-badge">{{ cart_items_count }}</span>
+                </a>
+                <a href="{% url 'store:compare' %}" class="wishlist-link" aria-label="Compare products">
+                    <i class="fa fa-exchange"></i>
+                    <span class="wishlist-badge">{{ compare_items_count }}</span>
+                </a>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'store:wishlist' %}" class="wishlist-link" aria-label="View wishlist">
+                        <i class="fa fa-heart-o"></i>
+                        <span class="wishlist-badge">{{ wishlist_items_count }}</span>
+                    </a>
+                    <a href="{% url 'store:support-threads' %}" class="wishlist-link" aria-label="Support conversations">
+                        <i class="fa fa-comments-o"></i>
+                        <span class="wishlist-badge">{{ support_threads_count }}</span>
+                    </a>
+                {% endif %}
+                <img src="{% static 'images/menu.png' %}" alt="Open menu" class="menu-icon" onclick="toggleMenu()">
+            </div>
+        </div>
+        {% block header_content %}{% endblock %}
+    </header>
+
+    {% if messages %}
+        <div class="container flash-stack">
+            {% for message in messages %}
+                <div class="flash-message {{ message.tags }}" data-flash>{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if request.user.is_authenticated and not is_email_verified %}
+        <div class="container verification-banner">
+            <p>Your email is not verified yet. Open your <a href="{% url 'store:account-dashboard' %}">dashboard</a> to resend the verification link.</p>
+        </div>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-shell">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <a href="{% url 'store:home' %}" class="footer-logo-link" aria-label="Redstore home">
+                        <span class="footer-logo-frame">
+                            <img src="{% static 'images/dlogo3.png' %}" alt="Redstore logo" width="135">
+                        </span>
+                    </a>
+                    <p class="footer-kicker">Advanced Python Ecommerce</p>
+                    <p class="footer-summary">Structured catalog, server-driven checkout, customer support workflows, operational analytics, and API endpoints in one clean Django commerce application.</p>
+                    <div class="footer-contact">
+                        <span>Support</span>
+                        <a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Storefront</h3>
+                    <ul>
+                        <li><a href="{% url 'store:home' %}">Home</a></li>
+                        <li><a href="{% url 'store:catalog' %}">Catalog</a></li>
+                        <li><a href="{% url 'store:compare' %}">Compare</a></li>
+                        <li><a href="{% url 'store:insights' %}">Insights</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Customer</h3>
+                    <ul>
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'store:account-dashboard' %}">Dashboard</a></li>
+                            <li><a href="{% url 'store:order-history' %}">Orders</a></li>
+                            <li><a href="{% url 'store:wishlist' %}">Wishlist</a></li>
+                            <li><a href="{% url 'store:support-threads' %}">Support</a></li>
+                        {% else %}
+                            <li><a href="{% url 'store:login' %}">Account Login</a></li>
+                            <li><a href="{% url 'store:signup' %}">Create Account</a></li>
+                            <li><a href="{% url 'store:cart' %}">Cart</a></li>
+                            <li><a href="{% url 'store:catalog' %}">Browse Products</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Developer</h3>
+                    <ul>
+                        <li><a href="{% url 'store:api-root' %}">API Root</a></li>
+                        <li><a href="{% url 'store:api-analytics-overview' %}">Analytics API</a></li>
+                        <li><a href="{% url 'store:api-health' %}">Health Check</a></li>
+                        <li><a href="{% url 'admin:index' %}">Admin</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-divider"></div>
+            <div class="footer-bottom">
+                <p class="footer-credit">Redstore Advanced Ecommerce Platform</p>
+                <p class="footer-meta">Python-first commerce architecture with Django, recommendation workflows, and operational APIs.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/scripts.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

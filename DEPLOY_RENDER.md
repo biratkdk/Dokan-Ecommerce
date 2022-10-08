@@ -34,6 +34,7 @@ This will create:
 
 Set or confirm these values in Render:
 
+- `PYTHON_VERSION=3.12.11`
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG=0`
 - `DATABASE_URL`
@@ -45,6 +46,8 @@ Set or confirm these values in Render:
 - `SITE_BASE_URL=https://<your-service>.onrender.com`
 - `DJANGO_ALLOWED_HOSTS=<your-service>.onrender.com`
 - `DJANGO_CSRF_TRUSTED_ORIGINS=https://<your-service>.onrender.com`
+
+Use Python `3.12+` on Render because this project currently pins `Django==6.0.3`.
 
 ## Optional real email delivery
 

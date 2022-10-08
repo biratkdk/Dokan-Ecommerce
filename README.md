@@ -109,11 +109,14 @@ This project is now prepared for dynamic deployment on Render:
 
 Render-specific env vars already scaffolded:
 
+- `PYTHON_VERSION=3.12.11`
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG=0`
 - `DATABASE_URL`
 - `SUPPORT_CONTACT_EMAIL=biratkhadka6@gmail.com`
 - `DJANGO_DEFAULT_FROM_EMAIL=Redstore Support <biratkhadka6@gmail.com>`
+
+Use Python `3.12+` on Render because this project currently pins `Django==6.0.3`.
 
 If you want real outgoing email after deployment, switch `DJANGO_EMAIL_BACKEND` from console backend to SMTP and provide:
 

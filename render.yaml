@@ -12,6 +12,8 @@ services:
     buildCommand: "bash build.sh"
     startCommand: "python -m gunicorn redstore.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.11"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG

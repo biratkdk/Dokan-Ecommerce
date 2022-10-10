@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}All Products | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <h2>All Products</h2>
+            <form method="get" class="catalog-toolbar">
+                <input type="search" name="q" value="{{ search_term }}" placeholder="Search products">
+                <select name="category">
+                    <option value="">All categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.slug }}" {% if selected_category == category.slug %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="brand">
+                    <option value="">All brands</option>
+                    {% for brand in brands %}
+                        <option value="{{ brand.slug }}" {% if selected_brand == brand.slug %}selected{% endif %}>{{ brand.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="sort">
+                    <option value="relevance" {% if selected_sort == "relevance" %}selected{% endif %}>Relevance</option>
+                    <option value="latest" {% if selected_sort == "latest" %}selected{% endif %}>Latest</option>
+                    <option value="price_low" {% if selected_sort == "price_low" %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if selected_sort == "price_high" %}selected{% endif %}>Price: High to Low</option>
+                    <option value="rating" {% if selected_sort == "rating" %}selected{% endif %}>Best Rated</option>
+                    <option value="popular" {% if selected_sort == "popular" %}selected{% endif %}>Most Popular</option>
+                </select>
+                <button type="submit" class="btn compact-btn">Apply</button>
+            </form>
+        </div>
+
+        {% if search_term and query_support_suggestions %}
+            <div class="assistant-panel">
+                <h3>Search Assistant</h3>
+                <p>Classical retrieval logic suggests these related help topics for “{{ search_term }}”.</p>
+                <div class="assistant-grid">
+                    {% for suggestion in query_support_suggestions %}
+                        <div class="assistant-card">
+                            <strong>{{ suggestion.title }}</strong>
+                            <span>{{ suggestion.confidence }} confidence</span>
+                            <p>{{ suggestion.answer }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if items %}
+            <div class="row">
+                {% for item in items %}
+                    <div class="col-4">
+                        <a href="{{ item.get_absolute_url }}">
+                            <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        </a>
+                        <span class="product-badge">{{ item.brand_name }}</span>
+                        <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                        <p>{{ item.short_description }}</p>
+                        <div class="meta-line">
+                            <span>{{ item.category_name }}</span>
+                            <span>{{ item.average_rating }}/5</span>
+                        </div>
+                        <div class="meta-line">
+                            <span>{{ item.inventory_status }}</span>
+                            <span>{{ item.wishlist_count }} wishlists</span>
+                        </div>
+                        {% if item.search_score %}
+                            <div class="meta-line">
+                                <span>{{ item.search_score }} relevance</span>
+                                <span>{{ item.search_reasons|join:", " }}</span>
+                            </div>
+                        {% endif %}
+                        <div class="price-line">
+                            {% if item.has_discount %}
+                                <span class="old-price">${{ item.price|floatformat:2 }}</span>
+                            {% endif %}
+                            <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="card-actions">
+                            <form method="post" action="{% url 'store:add-to-cart' item.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn compact-btn">Add to Cart</button>
+                            </form>
+                            {% if request.user.is_authenticated %}
+                                <form method="post" action="{% url 'store:toggle-wishlist' item.slug %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="secondary-chip">Wishlist</button>
+                                </form>
+                            {% endif %}
+                            <form method="post" action="{% url 'store:toggle-compare' item.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="secondary-chip">Compare</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No products matched this filter</h3>
+                <p>Try another brand, category, or keyword.</p>
+            </div>
+        {% endif %}
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <div class="page-btn">
+                {% if page_obj.has_previous %}
+                    <span><a href="?page={{ page_obj.previous_page_number }}&q={{ search_term }}&category={{ selected_category }}&brand={{ selected_brand }}&sort={{ selected_sort }}">&larr;</a></span>
+                {% endif %}
+                {% for page_number in page_obj.paginator.page_range %}
+                    <span>
+                        <a href="?page={{ page_number }}&q={{ search_term }}&category={{ selected_category }}&brand={{ selected_brand }}&sort={{ selected_sort }}">{{ page_number }}</a>
+                    </span>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <span><a href="?page={{ page_obj.next_page_number }}&q={{ search_term }}&category={{ selected_category }}&brand={{ selected_brand }}&sort={{ selected_sort }}">&rarr;</a></span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Checkout</h2>
+
+        <div class="checkout-grid">
+            <div class="checkout-card">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="form-errors">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <h3>Shipping Address</h3>
+                    {% if default_shipping_address %}
+                        <label class="checkbox-row">
+                            {{ form.use_default_shipping }}
+                            <span>Use saved shipping address: {{ default_shipping_address.short_display }}</span>
+                        </label>
+                    {% endif %}
+
+                    <div class="form-grid">
+                        <div class="field-group">{{ form.shipping_full_name.label_tag }}{{ form.shipping_full_name }}{{ form.shipping_full_name.errors }}</div>
+                        <div class="field-group">{{ form.shipping_phone_number.label_tag }}{{ form.shipping_phone_number }}{{ form.shipping_phone_number.errors }}</div>
+                        <div class="field-group">{{ form.shipping_street_address.label_tag }}{{ form.shipping_street_address }}{{ form.shipping_street_address.errors }}</div>
+                        <div class="field-group">{{ form.shipping_apartment_address.label_tag }}{{ form.shipping_apartment_address }}{{ form.shipping_apartment_address.errors }}</div>
+                        <div class="field-group">{{ form.shipping_city.label_tag }}{{ form.shipping_city }}{{ form.shipping_city.errors }}</div>
+                        <div class="field-group">{{ form.shipping_state.label_tag }}{{ form.shipping_state }}{{ form.shipping_state.errors }}</div>
+                        <div class="field-group">{{ form.shipping_country.label_tag }}{{ form.shipping_country }}{{ form.shipping_country.errors }}</div>
+                        <div class="field-group">{{ form.shipping_postal_code.label_tag }}{{ form.shipping_postal_code }}{{ form.shipping_postal_code.errors }}</div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        {{ form.save_shipping_as_default }}
+                        <span>Save this as my default shipping address</span>
+                    </label>
+
+                    <hr>
+
+                    <h3>Billing Address</h3>
+                    <label class="checkbox-row">
+                        {{ form.same_billing_address }}
+                        <span>Billing address is the same as shipping</span>
+                    </label>
+
+                    {% if default_billing_address %}
+                        <label class="checkbox-row">
+                            {{ form.use_default_billing }}
+                            <span>Use saved billing address: {{ default_billing_address.short_display }}</span>
+                        </label>
+                    {% endif %}
+
+                    <div class="form-grid">
+                        <div class="field-group">{{ form.billing_full_name.label_tag }}{{ form.billing_full_name }}{{ form.billing_full_name.errors }}</div>
+                        <div class="field-group">{{ form.billing_phone_number.label_tag }}{{ form.billing_phone_number }}{{ form.billing_phone_number.errors }}</div>
+                        <div class="field-group">{{ form.billing_street_address.label_tag }}{{ form.billing_street_address }}{{ form.billing_street_address.errors }}</div>
+                        <div class="field-group">{{ form.billing_apartment_address.label_tag }}{{ form.billing_apartment_address }}{{ form.billing_apartment_address.errors }}</div>
+                        <div class="field-group">{{ form.billing_city.label_tag }}{{ form.billing_city }}{{ form.billing_city.errors }}</div>
+                        <div class="field-group">{{ form.billing_state.label_tag }}{{ form.billing_state }}{{ form.billing_state.errors }}</div>
+                        <div class="field-group">{{ form.billing_country.label_tag }}{{ form.billing_country }}{{ form.billing_country.errors }}</div>
+                        <div class="field-group">{{ form.billing_postal_code.label_tag }}{{ form.billing_postal_code }}{{ form.billing_postal_code.errors }}</div>
+                    </div>
+
+                    <label class="checkbox-row">
+                        {{ form.save_billing_as_default }}
+                        <span>Save this as my default billing address</span>
+                    </label>
+
+                    <hr>
+
+                    <h3>Order Options</h3>
+                    <div class="form-grid">
+                        <div class="field-group">{{ form.coupon_code.label_tag }}{{ form.coupon_code }}{{ form.coupon_code.errors }}</div>
+                        <div class="field-group">{{ form.customer_note.label_tag }}{{ form.customer_note }}{{ form.customer_note.errors }}</div>
+                    </div>
+
+                    <h3>Payment Preference</h3>
+                    <div class="payment-options">
+                        {{ form.payment_method }}
+                    </div>
+                    {% if stripe_enabled %}
+                        <p class="payment-note">Stripe Checkout is enabled. Card payments are redirected to Stripe's hosted checkout page and confirmed back on the server. Add `STRIPE_WEBHOOK_SECRET` as well for background webhook confirmation.</p>
+                    {% else %}
+                        <p class="payment-note">Stripe Checkout is listed for deployment use, but it is currently disabled until `STRIPE_SECRET_KEY` is configured.</p>
+                    {% endif %}
+
+                    <button class="btn" type="submit">Continue</button>
+                </form>
+            </div>
+
+            {% include "order_snippet.html" %}
+        </div>
+    </div>
+{% endblock %}

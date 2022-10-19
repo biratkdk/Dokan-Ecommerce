@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Order History | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Order History</h2>
+        {% if orders %}
+            <div class="history-stack">
+                {% for order in orders %}
+                    <div class="history-card">
+                        <div class="history-header">
+                            <div>
+                                <h3>{{ order.reference }}</h3>
+                                <p>{{ order.get_status_display }} | {{ order.get_payment_method_display }} | {{ order.get_payment_status_display }}</p>
+                            </div>
+                            <strong>${{ order.total|floatformat:2 }}</strong>
+                        </div>
+                        {% if order.payment_reference %}
+                            <p>Payment reference: {{ order.payment_reference }}</p>
+                        {% endif %}
+                        <p>Estimated delivery: {{ order.estimated_delivery_days }} days</p>
+                        {% if order.status == "payment_pending" %}
+                            <p class="payment-note">This order is waiting for Stripe confirmation. It will move into processing as soon as the payment is confirmed.</p>
+                        {% endif %}
+                        {% if order.customer_note %}
+                            <p>Note: {{ order.customer_note }}</p>
+                        {% endif %}
+                        <ul class="summary-list">
+                            {% for order_item in order.items.all %}
+                                <li>
+                                    <span>
+                                        {{ order_item.item.title }} x {{ order_item.quantity }}
+                                        {% if order.status == "delivered" %}
+                                            {% if order_item.return_requests.all %}
+                                                <span class="inline-status">Return in progress</span>
+                                            {% else %}
+                                                <a href="{% url 'store:return-request' order.reference order_item.id %}" class="return-link">Request Return</a>
+                                            {% endif %}
+                                        {% endif %}
+                                    </span>
+                                    <strong>${{ order_item.total_price|floatformat:2 }}</strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% if order.return_requests.all %}
+                            <div class="return-stack">
+                                {% for return_request in order.return_requests.all %}
+                                    <div class="return-card">
+                                        <strong>{{ return_request.order_item.item.title }}</strong>
+                                        <span>{{ return_request.get_status_display }}</span>
+                                        <p>{{ return_request.get_reason_display }}{% if return_request.details %} | {{ return_request.details }}{% endif %}</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="timeline">
+                            {% for event in order.status_events.all %}
+                                <div class="timeline-row">
+                                    <span>{{ event.get_status_display }}</span>
+                                    <span>{{ event.note }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No orders yet</h3>
+                <p>Your placed orders will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

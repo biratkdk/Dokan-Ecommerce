@@ -81,44 +81,61 @@
     </main>
 
     <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="footer-col-1">
-                    <h3>Download Our App</h3>
-                    <p>Redstore keeps the storefront server-driven and Python-first, which fits a strong 2022-era ecommerce project build.</p>
-                    <div class="app-logo">
-                        <img src="{% static 'images/play-store.png' %}" alt="Play Store">
-                        <img src="{% static 'images/app-store.png' %}" alt="App Store">
+        <div class="container footer-shell">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <a href="{% url 'store:home' %}" class="footer-logo-link" aria-label="Redstore home">
+                        <span class="footer-logo-frame">
+                            <img src="{% static 'images/dlogo3.png' %}" alt="Redstore logo" width="135">
+                        </span>
+                    </a>
+                    <p class="footer-kicker">Advanced Python Ecommerce</p>
+                    <p class="footer-summary">Structured catalog, server-driven checkout, customer support workflows, operational analytics, and API endpoints in one clean Django commerce application.</p>
+                    <div class="footer-contact">
+                        <span>Support</span>
+                        <a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a>
                     </div>
                 </div>
-                <div class="footer-col-2">
-                    <img src="{% static 'images/logo-white.png' %}" alt="Redstore white logo">
-                    <p>Advanced ecommerce features now include wishlist, reviews, support chat, email workflows, account security, demand analytics, recommendations, JSON APIs, and richer order tracking.</p>
-                </div>
-                <div class="footer-col-3">
-                    <h3>Developer Surface</h3>
+                <div class="footer-section">
+                    <h3>Storefront</h3>
                     <ul>
-                        <li><a href="{% url 'store:api-root' %}">API root</a></li>
+                        <li><a href="{% url 'store:home' %}">Home</a></li>
+                        <li><a href="{% url 'store:catalog' %}">Catalog</a></li>
+                        <li><a href="{% url 'store:compare' %}">Compare</a></li>
+                        <li><a href="{% url 'store:insights' %}">Insights</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Customer</h3>
+                    <ul>
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'store:account-dashboard' %}">Dashboard</a></li>
+                            <li><a href="{% url 'store:order-history' %}">Orders</a></li>
+                            <li><a href="{% url 'store:wishlist' %}">Wishlist</a></li>
+                            <li><a href="{% url 'store:support-threads' %}">Support</a></li>
+                        {% else %}
+                            <li><a href="{% url 'store:login' %}">Account Login</a></li>
+                            <li><a href="{% url 'store:signup' %}">Create Account</a></li>
+                            <li><a href="{% url 'store:cart' %}">Cart</a></li>
+                            <li><a href="{% url 'store:catalog' %}">Browse Products</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Developer</h3>
+                    <ul>
+                        <li><a href="{% url 'store:api-root' %}">API Root</a></li>
                         <li><a href="{% url 'store:api-analytics-overview' %}">Analytics API</a></li>
-                        <li><a href="{% url 'store:api-ai-assistant' %}?q=delivery">Assistant API</a></li>
-                        <li><a href="{% url 'store:catalog' %}">Catalog UI</a></li>
-                        <li><a href="{% url 'store:insights' %}">Insights UI</a></li>
+                        <li><a href="{% url 'store:api-health' %}">Health Check</a></li>
+                        <li><a href="{% url 'admin:index' %}">Admin</a></li>
                     </ul>
-                </div>
-                <div class="footer-col-4">
-                    <h3>Store Intelligence</h3>
-                    <ul>
-                        <li>Recommendation scoring</li>
-                        <li>Ranked catalog search</li>
-                        <li>Demand prioritization</li>
-                        <li>Customer retention scoring</li>
-                        <li>Inventory risk alerts</li>
-                    </ul>
-                    <p class="support-email">Support: {{ support_contact_email }}</p>
                 </div>
             </div>
-            <hr>
-            <p class="copyright">Redstore Advanced Ecommerce</p>
+            <div class="footer-divider"></div>
+            <div class="footer-bottom">
+                <p class="footer-credit">Redstore Advanced Ecommerce Platform</p>
+                <p class="footer-meta">Python-first commerce architecture with Django, recommendation workflows, and operational APIs.</p>
+            </div>
         </div>
     </footer>
 

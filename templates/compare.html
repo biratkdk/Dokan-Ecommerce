@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compare Products | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <h2 class="title">Product Compare</h2>
+        {% if compare_items %}
+            <div class="compare-grid">
+                {% for item in compare_items %}
+                    <div class="compare-card">
+                        <a href="{{ item.get_absolute_url }}">
+                            <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        </a>
+                        <a href="{{ item.get_absolute_url }}"><h3>{{ item.title }}</h3></a>
+                        <p>{{ item.brand_name }} | {{ item.category_name }}</p>
+                        <p class="current-price">${{ item.unit_price|floatformat:2 }}</p>
+                        <p>{{ item.average_rating }}/5 from {{ item.review_count }} reviews</p>
+                        <p>{{ item.inventory_status }}</p>
+                        <form method="post" action="{% url 'store:toggle-compare' item.slug %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'store:compare' %}">
+                            <button type="submit" class="secondary-chip">Remove</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="compare-table-wrap">
+                <table class="compare-table">
+                    <tr>
+                        <th>Attribute</th>
+                        {% for item in compare_items %}
+                            <th>{{ item.title }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for row in comparison_rows %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            {% for value in row.values %}
+                                <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No products in compare</h3>
+                <p>Add up to four products from the catalog to compare their price, rating, and specifications.</p>
+                <a href="{% url 'store:catalog' %}" class="btn">Browse products</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

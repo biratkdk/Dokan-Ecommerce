@@ -1,0 +1,260 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .metric-card, .panel-card {
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  }
+  .metric-card h3, .panel-card h3 {
+    margin: 0 0 8px;
+  }
+  .metric-card strong {
+    display: block;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .compact-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compact-table th,
+  .compact-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #ededed;
+    text-align: left;
+  }
+  .timeline-bars {
+    display: grid;
+    gap: 10px;
+  }
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+  }
+  .timeline-bar {
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff523b, #ff8b78);
+  }
+  .quiet {
+    color: #6b7280;
+  }
+  @media (max-width: 1024px) {
+    .dashboard-grid,
+    .stack-grid {
+      grid-template-columns: 1fr;
+    }
+    .timeline-row {
+      grid-template-columns: 70px 1fr 90px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <h1>{{ title }}</h1>
+  <p class="quiet">Revenue, payment mix, merchandising performance, and inventory risk in one admin surface.</p>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <h3>Gross Revenue</h3>
+      <strong>${{ metrics.gross_revenue|floatformat:2 }}</strong>
+      <span class="quiet">Placed, processing, shipped, and delivered orders</span>
+    </div>
+    <div class="metric-card">
+      <h3>Paid Online Revenue</h3>
+      <strong>${{ metrics.paid_online_revenue|floatformat:2 }}</strong>
+      <span class="quiet">Stripe-confirmed payments</span>
+    </div>
+    <div class="metric-card">
+      <h3>Average Order Value</h3>
+      <strong>${{ metrics.average_order_value|floatformat:2 }}</strong>
+      <span class="quiet">Current booked order mix</span>
+    </div>
+    <div class="metric-card">
+      <h3>Open Orders</h3>
+      <strong>{{ metrics.open_orders }}</strong>
+      <span class="quiet">{{ metrics.pending_payment_orders }} pending payment</span>
+    </div>
+    <div class="metric-card">
+      <h3>Delivered Orders</h3>
+      <strong>{{ metrics.delivered_orders }}</strong>
+      <span class="quiet">Completed fulfillment</span>
+    </div>
+    <div class="metric-card">
+      <h3>Open Returns</h3>
+      <strong>{{ metrics.open_returns }}</strong>
+      <span class="quiet">Return requests awaiting closure</span>
+    </div>
+    <div class="metric-card">
+      <h3>Customers</h3>
+      <strong>{{ metrics.customers_with_orders }}</strong>
+      <span class="quiet">{{ metrics.registered_users }} registered users</span>
+    </div>
+    <div class="metric-card">
+      <h3>Verified Profiles</h3>
+      <strong>{{ metrics.verified_profiles }}</strong>
+      <span class="quiet">Accounts with verified email</span>
+    </div>
+    <div class="metric-card">
+      <h3>Open Support</h3>
+      <strong>{{ metrics.open_support_threads }}</strong>
+      <span class="quiet">Threads awaiting closure</span>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="panel-card">
+      <h3>7-Day Revenue Trend</h3>
+      <div class="timeline-bars">
+        {% for row in revenue_timeline %}
+          <div class="timeline-row">
+            <span>{{ row.label }}</span>
+            <div class="timeline-bar" style="width: {{ row.percent }}%;"></div>
+            <span>${{ row.total|floatformat:2 }} / {{ row.orders }} orders</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>Payment Mix</h3>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Orders</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in payment_mix %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.count }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="2">No payment data yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stack-grid">
+    <div class="panel-card">
+      <h3>Top Products</h3>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Sold</th>
+            <th>Views</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in top_products %}
+            <tr>
+              <td>{{ item.title }}</td>
+              <td>{{ item.sold_units }}</td>
+              <td>{{ item.view_count }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-card">
+      <h3>Inventory Risk</h3>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Stock</th>
+            <th>Reorder</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in low_stock_items %}
+            <tr>
+              <td>{{ item.title }}</td>
+              <td>{{ item.stock }}</td>
+              <td>{{ item.reorder_level }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3">No low-stock items.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-card">
+      <h3>Category Performance</h3>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Items</th>
+            <th>Sold</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category in category_performance %}
+            <tr>
+              <td>{{ category.name }}</td>
+              <td>{{ category.item_count }}</td>
+              <td>{{ category.sold_units }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-card">
+      <h3>Recent Orders</h3>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Status</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in recent_orders %}
+            <tr>
+              <td>{{ order.reference }}</td>
+              <td>{{ order.get_status_display }}</td>
+              <td>${{ order.total|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

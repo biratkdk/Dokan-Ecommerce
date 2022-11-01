@@ -1,0 +1,8 @@
+Hello {{ user.username }},
+
+Payment has been confirmed for Redstore order {{ order.reference }}.
+
+Payment reference: {{ order.payment_reference|default:"Processed online" }}
+Order total: ${{ order.total|floatformat:2 }}
+
+Your order is now released for fulfillment.

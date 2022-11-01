@@ -1,0 +1,9 @@
+Hello {{ user.username }},
+
+We received your return request for order {{ order.reference }}.
+
+Item: {{ return_request.order_item.item.title }}
+Reason: {{ return_request.get_reason_display }}
+Quantity: {{ return_request.quantity }}
+
+Our support process will review the request and update the order timeline.

@@ -1,0 +1,9 @@
+Hello {{ user.username }},
+
+Your Redstore order {{ order.reference }} has been placed successfully.
+
+Order total: ${{ order.total|floatformat:2 }}
+Payment method: {{ order.get_payment_method_display }}
+Estimated delivery: {{ order.estimated_delivery_days }} days
+
+You can track the order from your dashboard and order history.

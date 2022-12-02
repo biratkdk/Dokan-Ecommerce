@@ -4,8 +4,6 @@
 
 Dokan Ecommerce is a final-year 5-credit academic project developed using Python and Django. The application is presented through a Redstore-themed storefront interface and implements a complete ecommerce workflow covering product browsing, cart management, checkout, payments, order tracking, returns, customer support, analytics, and API integration.
 
-This project was prepared to demonstrate practical software engineering skills in backend development, database design, authentication, payment integration, deployment, and applied analytics within an ecommerce domain.
-
 ## Project Objectives
 
 - design and implement a full-featured ecommerce web application using Python

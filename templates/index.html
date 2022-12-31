@@ -2,39 +2,65 @@
 {% load static %}
 
 {% block title %}Redstore | Advanced Python Ecommerce{% endblock %}
-{% block header_class %}header{% endblock %}
 
 {% block header_content %}
+    <div class="hero-section">
     <div class="container">
-        <div class="row">
-            <div class="col-2">
-                <h1>Advanced Ecommerce,<br>Built the Pythonic Way.</h1>
-                <p>Redstore now behaves like a serious backend-led ecommerce project: structured catalog, cart, checkout, wishlist, reviews, account security, support chat, APIs, and recommendation analytics.</p>
+        <div class="hero-shell">
+            <div class="hero-copy">
+                <p class="hero-eyebrow">Django &middot; Real ML Recommendations &middot; Stripe-ready</p>
+                <h1>Ecommerce that's<br>actually built, not bolted on.</h1>
+                <p class="hero-lede">Structured catalog, real checkout, warehouse-aware inventory, and a TF-IDF + collaborative-filtering recommendation engine &mdash; not a keyword-matching demo dressed up as "AI".</p>
                 <a href="{% url 'store:catalog' %}" class="btn">Explore Catalog &#8594;</a>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <strong>{{ catalog_item_count }}</strong>
+                        <span>Products live</span>
+                    </div>
+                    <div class="hero-stat">
+                        <strong>{{ categories|length }}</strong>
+                        <span>Categories</span>
+                    </div>
+                    <div class="hero-stat">
+                        <strong>{{ brand_count }}</strong>
+                        <span>Brands</span>
+                    </div>
+                </div>
             </div>
-            <div class="col-2">
-                <img src="{% static 'images/image1.png' %}" alt="Redstore hero">
+            <div class="hero-visual" aria-hidden="true">
+                <div class="hero-visual-card hero-visual-card-1">
+                    <span class="hero-visual-label">Recommendation engine</span>
+                    <strong>TF-IDF + Collaborative Filtering</strong>
+                </div>
+                <div class="hero-visual-card hero-visual-card-2">
+                    <span class="hero-visual-label">Inventory ledger</span>
+                    <strong>Multi-warehouse, audit-ready</strong>
+                </div>
+                <div class="hero-visual-card hero-visual-card-3">
+                    <span class="hero-visual-label">Checkout</span>
+                    <strong>Stripe webhook-driven</strong>
+                </div>
             </div>
         </div>
+    </div>
     </div>
 {% endblock %}
 
 {% block content %}
-    <div class="categories">
-        <div class="small-container">
-            <div class="row">
-                <div class="col-3">
-                    <img src="{% static 'images/category-1.jpg' %}" alt="Apparel">
-                </div>
-                <div class="col-3">
-                    <img src="{% static 'images/category-2.jpg' %}" alt="Electronics">
-                </div>
-                <div class="col-3">
-                    <img src="{% static 'images/category-3.jpg' %}" alt="Accessories">
+    {% if categories %}
+        <div class="categories">
+            <div class="small-container">
+                <div class="category-grid">
+                    {% for category in categories %}
+                        <a href="{% url 'store:catalog' %}?category={{ category.slug }}" class="category-tile category-tile-{{ forloop.counter }}">
+                            <span class="category-tile-name">{{ category.name }}</span>
+                            <span class="category-tile-count">{{ category.item_count }} product{{ category.item_count|pluralize }}</span>
+                        </a>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    </div>
+    {% endif %}
 
     <div class="small-container">
         <h2 class="title">Featured Products</h2>

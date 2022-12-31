@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
 from django.core import signing
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db.models.functions import Coalesce
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -181,6 +181,12 @@ class HomeView(TemplateView):
             user=self.request.user if self.request.user.is_authenticated else None,
             limit=4,
         )
+        active_catalog = Item.objects.active()
+        categories = (
+            Category.objects.filter(is_active=True)
+            .annotate(item_count=Count("items", filter=Q(items__is_active=True)))
+            .order_by("sort_order", "name")[:4]
+        )
         context.update(
             {
                 "featured_items": featured_items,
@@ -192,6 +198,9 @@ class HomeView(TemplateView):
                 "customer_health": insights["customer_health"],
                 "recently_viewed_items": get_recently_viewed_items(self.request, limit=4),
                 "compare_items": get_compare_items(self.request),
+                "categories": categories,
+                "catalog_item_count": active_catalog.count(),
+                "brand_count": Brand.objects.filter(is_featured=True).count() or Brand.objects.count(),
             }
         )
         return context

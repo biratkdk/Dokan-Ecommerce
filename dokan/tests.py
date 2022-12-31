@@ -4,6 +4,8 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import mock
 
+import stripe
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -311,6 +313,49 @@ class CartFlowTests(TestCase):
             1,
         )
         self.assertTrue(
+            EmailNotification.objects.filter(
+                order=order,
+                kind=EmailNotification.Kind.PAYMENT_RECEIVED,
+            ).exists()
+        )
+
+    @mock.patch("dokan.views.construct_stripe_event")
+    @mock.patch("dokan.views.create_stripe_checkout_session")
+    def test_stripe_webhook_rejects_invalid_signature_and_does_not_finalize_order(
+        self, session_mock, construct_event_mock
+    ):
+        session_mock.return_value = SimpleNamespace(
+            id="cs_test_456",
+            url="https://checkout.stripe.com/pay/cs_test_456",
+            status="open",
+        )
+        self.client.login(username="birat", password="strong-pass-123")
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 2},
+        )
+        self.client.post(
+            reverse("store:checkout"),
+            self._checkout_payload(Order.PaymentMethod.STRIPE),
+        )
+        order = Order.objects.get(user=self.user, status=Order.Status.PAYMENT_PENDING)
+
+        construct_event_mock.side_effect = stripe.error.SignatureVerificationError(
+            "Signature verification failed", "tampered-signature"
+        )
+
+        webhook_response = self.client.post(
+            reverse("store:stripe-webhook"),
+            data=b"{}",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="tampered-signature",
+        )
+
+        self.assertEqual(webhook_response.status_code, 400)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PAYMENT_PENDING)
+        self.assertEqual(order.payment_status, Order.PaymentStatus.PENDING)
+        self.assertFalse(
             EmailNotification.objects.filter(
                 order=order,
                 kind=EmailNotification.Kind.PAYMENT_RECEIVED,

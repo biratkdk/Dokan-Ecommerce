@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
+    "drf_spectacular",
     "dokan",
 ]
 
@@ -221,6 +222,17 @@ REST_FRAMEWORK = {
         "inventory": "180/hour",
         "auth": "20/hour",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Dokan Ecommerce API",
+    "DESCRIPTION": (
+        "DRF v2 API for the Dokan Ecommerce storefront: account management, "
+        "inventory, reservations, and stock movements."
+    ),
+    "VERSION": "2.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 USE_X_FORWARDED_HOST = True

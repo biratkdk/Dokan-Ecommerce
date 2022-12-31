@@ -221,6 +221,14 @@ Examples:
 - `/api/v2/inventory/adjustments/`
 - `/api/v2/inventory/transfers/`
 
+### Interactive API Docs
+
+The v2 API surface is documented with an auto-generated OpenAPI schema
+(drf-spectacular):
+
+- `/api/schema/` — raw OpenAPI 3 schema (YAML)
+- `/api/docs/` — Swagger UI, browsable and testable from a browser
+
 ## Project Structure
 
 ```text
@@ -288,6 +296,17 @@ python -m venv .venv
 .\.venv\Scripts\python.exe manage.py createsuperuser
 ```
 
+### Alternative: Docker
+
+A `Dockerfile` and `docker-compose.yml` are included for a one-command setup
+with Postgres, matching the production database engine instead of SQLite:
+
+```bash
+docker compose up --build
+```
+
+This runs migrations automatically and serves the app at `http://localhost:8000/`.
+
 ## Useful Commands
 
 ### Health and validation
@@ -295,6 +314,19 @@ python -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe manage.py check
 .\.venv\Scripts\python.exe manage.py test
+```
+
+### Test coverage
+
+```powershell
+.\.venv\Scripts\python.exe -m coverage run manage.py test
+.\.venv\Scripts\python.exe -m coverage report
+```
+
+### Recommendation engine evaluation
+
+```powershell
+.\.venv\Scripts\python.exe manage.py evaluate_recommendations --k 4
 ```
 
 ### Email queue

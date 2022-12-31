@@ -1,0 +1,9 @@
+[run]
+source = dokan
+omit =
+    */migrations/*
+    */management/commands/*
+    dokan/tests.py
+
+[report]
+show_missing = True

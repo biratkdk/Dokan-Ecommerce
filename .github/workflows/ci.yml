@@ -36,8 +36,45 @@ jobs:
           DJANGO_SECURE_SSL_REDIRECT: "0"
         run: python manage.py collectstatic --noinput
 
-      - name: Run test suite
+      - name: Generate OpenAPI schema
         env:
           DJANGO_DEBUG: "0"
           DJANGO_SECURE_SSL_REDIRECT: "0"
-        run: python manage.py test
+        run: python manage.py spectacular --file /tmp/schema.yml
+
+      - name: Run test suite with coverage
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_SECURE_SSL_REDIRECT: "0"
+        run: |
+          coverage run manage.py test
+          coverage report
+
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t dokan-ecommerce:ci .
+
+      - name: Boot the image and check the health endpoint
+        run: |
+          docker run -d --name dokan-ci -p 8000:8000 \
+            -e DJANGO_DEBUG=0 \
+            -e DJANGO_SECURE_SSL_REDIRECT=0 \
+            -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
+            dokan-ecommerce:ci
+          sleep 3
+          docker exec dokan-ci python manage.py migrate --noinput
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8000/health/ > /dev/null; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Service did not become healthy in time"
+          docker logs dokan-ci
+          exit 1

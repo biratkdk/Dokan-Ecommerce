@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: dokan
+      POSTGRES_USER: dokan
+      POSTGRES_PASSWORD: dokan
+    volumes:
+      - dokan_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dokan"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn redstore.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_DEBUG: "0"
+      DJANGO_SECURE_SSL_REDIRECT: "0"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DATABASE_URL: "postgres://dokan:dokan@db:5432/dokan"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dokan_postgres_data:

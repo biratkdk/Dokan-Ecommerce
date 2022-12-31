@@ -1,5 +1,6 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from . import api_v2_views, api_views, views
 from .forms import PasswordResetConfirmForm, PasswordResetRequestForm
@@ -116,4 +117,6 @@ urlpatterns = [
     path("api/v2/inventory/movements/", api_v2_views.InventoryMovementsV2View.as_view(), name="api-v2-inventory-movements"),
     path("api/v2/inventory/adjustments/", api_v2_views.InventoryAdjustmentV2View.as_view(), name="api-v2-inventory-adjustments"),
     path("api/v2/inventory/transfers/", api_v2_views.InventoryTransferV2View.as_view(), name="api-v2-inventory-transfers"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="store:schema"), name="swagger-ui"),
 ]

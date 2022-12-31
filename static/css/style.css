@@ -1571,6 +1571,29 @@ form a {
     color: #fff;
 }
 
+.insights-intro {
+    max-width: 68ch;
+    margin: 0 auto 40px;
+    text-align: center;
+    color: var(--color-muted);
+    line-height: 1.7;
+}
+
+.insights-section-header {
+    margin: 48px 0 20px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border);
+}
+
+.insights-section-header h2 {
+    margin-bottom: 6px;
+}
+
+.insights-section-header p {
+    color: var(--color-muted);
+    font-size: 14px;
+}
+
 .segment-eyebrow {
     letter-spacing: 0.12em;
     text-transform: uppercase;

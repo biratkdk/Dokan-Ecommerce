@@ -6,6 +6,12 @@
 {% block content %}
     <div class="small-container">
         <h2 class="title">Store Intelligence Dashboard</h2>
+        <p class="insights-intro">
+            This page surfaces what the store's recommendation engine and demand-scoring
+            models are actually computing right now: trending and top-rated products, stock
+            levels worth watching, and &mdash; if you're signed in with order history &mdash;
+            recommendations picked for you by the TF-IDF/collaborative-filtering engine.
+        </p>
 
         {% if customer_segment %}
             <div class="segment-card">
@@ -26,8 +32,9 @@
         {% endif %}
 
         {% if personalized_recommendations %}
-            <div class="row row-2">
+            <div class="insights-section-header">
                 <h2>Personalized Recommendations</h2>
+                <p>Picked for your active cart using item-based collaborative filtering.</p>
             </div>
             <div class="row">
                 {% for recommendation in personalized_recommendations %}
@@ -43,8 +50,9 @@
             </div>
         {% endif %}
 
-        <div class="row row-2">
+        <div class="insights-section-header">
             <h2>Trending Products</h2>
+            <p>Ranked by a demand score blending rating, wishlist adds, sales, and stock pressure.</p>
         </div>
         <div class="row">
             {% for item in trending_items %}
@@ -58,8 +66,9 @@
             {% endfor %}
         </div>
 
-        <div class="row row-2">
+        <div class="insights-section-header">
             <h2>Top Rated Products</h2>
+            <p>Highest average customer rating with at least one approved review.</p>
         </div>
         <div class="row">
             {% for item in top_rated_items %}
@@ -73,8 +82,9 @@
             {% endfor %}
         </div>
 
-        <div class="row row-2">
+        <div class="insights-section-header">
             <h2>Low Stock Alerts</h2>
+            <p>Products at or below their reorder level, sorted by estimated days until stockout.</p>
         </div>
         <div class="row">
             {% for item in low_stock_items %}
@@ -92,8 +102,9 @@
             {% endfor %}
         </div>
 
-        <div class="row row-2">
+        <div class="insights-section-header">
             <h2>Value Picks</h2>
+            <p>Currently discounted products, ranked by demand score.</p>
         </div>
         <div class="row">
             {% for item in value_picks %}

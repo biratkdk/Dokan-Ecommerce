@@ -248,6 +248,7 @@ def send_email_verification_email(user, *, request=None) -> EmailNotification:
         recipient_email=user.email,
         subject="Verify your Redstore account email",
         text_template="emails/verify_email.txt",
+        html_template="emails/verify_email.html",
         context={
             "user": user,
             "verification_url": verification_url,

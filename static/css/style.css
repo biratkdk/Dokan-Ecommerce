@@ -750,11 +750,29 @@ form a {
 }
 
 .verification-banner {
+    position: relative;
     margin-top: 20px;
     background: #fff3cd;
     border: 1px solid #ffe08a;
-    border-radius: 12px;
-    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    padding: 14px 44px 14px 18px;
+}
+
+.verification-banner-dismiss {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    border: none;
+    background: transparent;
+    color: #92660b;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.verification-banner-dismiss:hover {
+    color: #563d04;
 }
 
 .dashboard-layout {

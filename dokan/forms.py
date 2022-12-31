@@ -19,6 +19,7 @@ from .models import (
     SupportMessage,
     SupportThread,
 )
+from .payments import is_stripe_enabled
 
 
 User = get_user_model()
@@ -480,6 +481,12 @@ class CheckoutForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not is_stripe_enabled():
+            self.fields["payment_method"].choices = [
+                choice
+                for choice in Order.PaymentMethod.choices
+                if choice[0] != Order.PaymentMethod.STRIPE
+            ]
         for prefix in ("shipping", "billing"):
             for field_name, placeholder in self.ADDRESS_PLACEHOLDERS.items():
                 _apply_input_style(

@@ -96,6 +96,7 @@ class StorefrontTests(TestCase):
         self.assertEqual(response.json()["product"]["sku"], "RS-TEE-001")
 
 
+@override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
 class CartFlowTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="birat", password="strong-pass-123")

@@ -951,6 +951,17 @@ class SecuritySupportAndAssistantTests(TestCase):
         self.assertTrue(profile.email_verified)
         self.assertIsNotNone(profile.email_verified_at)
 
+    def test_resend_verification_email_url_does_not_collide_with_verify_token_route(self):
+        # Regression test: "account/verify/resend/" must not be swallowed by the
+        # "account/verify/<token>/" pattern, which would route POSTs here to
+        # VerifyEmailView (GET-only) and return 405 instead of resending the email.
+        self.client.login(username="secure-user", password="Strong-pass-12345")
+
+        response = self.client.post(reverse("store:resend-verification-email"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotEqual(response.status_code, 405)
+
     def test_login_view_records_activity_and_security_api(self):
         response = self.client.post(
             reverse("store:login"),

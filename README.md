@@ -411,7 +411,9 @@ The project currently has passing automated tests for the major flows:
 
 Current suite status:
 
-- `40` tests passing
+- `41` tests passing
+- `75%` statement coverage (`coverage run manage.py test && coverage report`), gated in CI at a `70%` floor
+- weakest-covered modules are the legacy v1 JSON API (`api_views.py`, 35%) and the Stripe payment helper (`payments.py`, 35%) — both are exercised indirectly through view-level tests but don't yet have direct unit coverage
 
 ## Recommendation Engine
 

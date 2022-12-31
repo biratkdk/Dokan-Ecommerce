@@ -16,6 +16,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import DetailView, FormView, ListView, TemplateView, View
@@ -105,6 +106,18 @@ from .support import create_support_thread, post_support_message, resolve_suppor
 
 
 User = get_user_model()
+
+
+def safe_redirect_target(request: HttpRequest, candidate: str | None, default: str) -> str:
+    """Return `candidate` only if it's a safe same-site redirect target, else `default`.
+
+    Guards against open redirects from user-controlled "next" form fields.
+    """
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return candidate
+    return default
 
 
 def build_account_settings_context(
@@ -993,7 +1006,9 @@ class ResendVerificationEmailView(LoginRequiredMixin, View):
         else:
             send_email_verification_email(request.user, request=request)
             messages.success(request, "A fresh verification email has been queued for delivery.")
-        return redirect(request.POST.get("next") or "store:account-dashboard")
+        return redirect(
+            safe_redirect_target(request, request.POST.get("next"), reverse("store:account-dashboard"))
+        )
 
 
 class AddToCartView(LoginRequiredMixin, View):
@@ -1011,14 +1026,14 @@ class AddToCartView(LoginRequiredMixin, View):
                 form.cleaned_data["quantity"],
             )
         except ValidationError as exc:
-            messages.error(request, exc.message)
+            messages.error(request, str(exc))
             return redirect(item.get_absolute_url())
 
         messages.success(
             request,
             f"{order_item.item.title} is now in your cart.",
         )
-        return redirect(request.POST.get("next") or "store:cart")
+        return redirect(safe_redirect_target(request, request.POST.get("next"), reverse("store:cart")))
 
 
 class ApplyCouponView(LoginRequiredMixin, View):
@@ -1034,7 +1049,7 @@ class ApplyCouponView(LoginRequiredMixin, View):
         try:
             coupon = apply_coupon_to_order(order, form.cleaned_data["code"])
         except ValidationError as exc:
-            messages.error(request, exc.message)
+            messages.error(request, str(exc))
         else:
             messages.success(request, f"Coupon {coupon.code} applied to your cart.")
         return redirect("store:cart")
@@ -1067,10 +1082,12 @@ class ToggleWishlistView(LoginRequiredMixin, View):
             messages.success(request, f"{item.title} added to your wishlist.")
         else:
             messages.info(request, f"{item.title} removed from your wishlist.")
-        return redirect(request.POST.get("next") or item.get_absolute_url())
+        return redirect(safe_redirect_target(request, request.POST.get("next"), item.get_absolute_url()))
 
 
 class ToggleCompareView(View):
+    # No LoginRequiredMixin: compare state lives in the session, so guests
+    # can use it too, unlike the wishlist which is tied to a user account.
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
         item = get_object_or_404(Item.objects.active(), slug=slug)
         result = toggle_compare_item(request, item)
@@ -1084,7 +1101,7 @@ class ToggleCompareView(View):
                 messages.success(request, f"{item.title} added to compare.")
         else:
             messages.info(request, f"{item.title} removed from compare.")
-        return redirect(request.POST.get("next") or item.get_absolute_url())
+        return redirect(safe_redirect_target(request, request.POST.get("next"), item.get_absolute_url()))
 
 
 class ReturnRequestCreateView(LoginRequiredMixin, FormView):
@@ -1228,14 +1245,15 @@ class ResolveSupportThreadView(LoginRequiredMixin, View):
         )
         resolve_support_thread(thread, actor=request.user)
         messages.success(request, "Support conversation marked as resolved.")
+        default_url = reverse("store:support-thread-detail", kwargs={"thread_id": thread.pk})
         next_url = request.POST.get("next", "").strip()
-        if next_url:
-            return redirect(next_url)
-        return redirect("store:support-thread-detail", thread_id=thread.pk)
+        return redirect(safe_redirect_target(request, next_url, default_url))
 
 
 class RemoveFromCartView(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
+        # Deliberately not .active() -- a customer must be able to remove or
+        # decrease an item that's since been deactivated/discontinued.
         item = get_object_or_404(Item, slug=slug)
         removed = remove_item_from_cart(request.user, item)
         if removed:

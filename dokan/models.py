@@ -187,6 +187,11 @@ class Item(TimestampedModel):
     )
     attributes = models.JSONField(default=dict, blank=True)
     tags = models.JSONField(default=list, blank=True)
+    # Denormalized cache of available stock (on_hand - reserved, summed across
+    # active warehouses). Kept in sync by post_save/post_delete signals on
+    # StockLevel and Warehouse (see signals.py). Never mutate StockLevel via a
+    # bulk .update() queryset call -- that bypasses those signals and leaves
+    # this field stale. Use sync_item_available_stock() to force a refresh.
     stock = models.PositiveIntegerField(default=10)
     reorder_level = models.PositiveIntegerField(default=5)
     launch_year = models.PositiveIntegerField(default=2022)
@@ -233,7 +238,8 @@ class Item(TimestampedModel):
             return ""
         if normalized.startswith(("http://", "https://", "/")):
             return normalized
-        return f"{settings.STATIC_URL.rstrip('/')}/{normalized.lstrip('/')}"
+        static_url = (settings.STATIC_URL or "/static/").rstrip("/")
+        return f"{static_url}/{normalized.lstrip('/')}"
 
     @property
     def primary_image(self) -> str:
@@ -369,7 +375,7 @@ class Coupon(TimestampedModel):
             return False
         if self.valid_from and at_time < self.valid_from:
             return False
-        if self.valid_until and at_time > self.valid_until:
+        if self.valid_until and at_time >= self.valid_until:
             return False
         if subtotal < self.minimum_order_value:
             return False

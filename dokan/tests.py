@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -21,8 +22,10 @@ from rest_framework.authtoken.models import Token
 
 from .accounts import build_email_verification_token, ensure_customer_profile
 from .models import (
+    Address,
     Brand,
     Category,
+    Coupon,
     CustomerProfile,
     EmailNotification,
     InventoryReservation,
@@ -40,6 +43,8 @@ from .models import (
     Warehouse,
     WishlistItem,
 )
+from .notifications import MAX_DELIVERY_ATTEMPTS, deliver_email_notification, process_pending_email_queue
+from .services import place_order
 
 
 User = get_user_model()
@@ -143,6 +148,15 @@ class CartFlowTests(TestCase):
 
         order = Order.objects.get(user=self.user, status=Order.Status.CART)
         self.assertEqual(order.total_items, 2)
+
+    def test_add_to_cart_rejects_off_site_next_redirect(self):
+        self.client.login(username="birat", password="strong-pass-123")
+        response = self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1, "next": "https://evil.example.com/phish"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("store:cart"))
 
     def test_checkout_places_order_and_updates_stock(self):
         self.client.login(username="birat", password="strong-pass-123")
@@ -362,6 +376,116 @@ class CartFlowTests(TestCase):
                 kind=EmailNotification.Kind.PAYMENT_RECEIVED,
             ).exists()
         )
+
+
+class CouponConsumptionTests(TestCase):
+    def _make_order(self, username: str, item: Item, coupon: Coupon) -> Order:
+        user = User.objects.create_user(username=username, password="strong-pass-123")
+        address = Address.objects.create(
+            user=user,
+            full_name="Test User",
+            street_address="Boudha Road",
+            city="Kathmandu",
+            state="Bagmati",
+            country="Nepal",
+            postal_code="44600",
+            address_type=Address.AddressType.SHIPPING,
+        )
+        order_item = OrderItem.objects.create(user=user, item=item, quantity=1, ordered=False)
+        order = Order.objects.create(user=user, coupon=coupon)
+        order.items.add(order_item)
+        return order, address
+
+    def test_limited_use_coupon_cannot_be_consumed_beyond_max_uses(self):
+        category = Category.objects.get(slug="footwear")
+        brand = Brand.objects.get(slug="hrx")
+        item = Item.objects.create(
+            title="Coupon Race Runner",
+            slug="coupon-race-runner",
+            sku="RS-CPN-001",
+            category=Item.Department.FOOTWEAR,
+            catalog_category=category,
+            brand=brand,
+            price=Decimal("100.00"),
+            short_description="Test item.",
+            description="Test item for coupon consumption.",
+            image_url="images/product-2.jpg",
+            stock=50,
+        )
+        coupon = Coupon.objects.create(
+            code="RACE-ONE-USE",
+            amount=Decimal("5.00"),
+            max_uses=1,
+            times_used=0,
+        )
+
+        order_one, address_one = self._make_order("coupon-user-one", item, coupon)
+        placed_one = place_order(
+            order_one,
+            shipping_address=address_one,
+            billing_address=address_one,
+            payment_method=Order.PaymentMethod.CASH,
+        )
+        self.assertEqual(placed_one.status, Order.Status.PLACED)
+
+        order_two, address_two = self._make_order("coupon-user-two", item, coupon)
+        with self.assertRaises(ValidationError):
+            place_order(
+                order_two,
+                shipping_address=address_two,
+                billing_address=address_two,
+                payment_method=Order.PaymentMethod.CASH,
+            )
+
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_used, 1)
+
+
+class LegacyApiRateLimitTests(TestCase):
+    def test_catalog_endpoint_returns_429_once_hourly_limit_is_exceeded(self):
+        from django.core.cache import cache
+
+        cache_key = "dokan:ratelimit:catalog:ip:127.0.0.1"
+        self.addCleanup(cache.delete, cache_key)
+        cache.set(cache_key, 240, timeout=3600)
+        response = self.client.get(reverse("store:api-catalog"))
+        self.assertEqual(response.status_code, 429)
+
+
+class EmailDeliveryRetryCapTests(TestCase):
+    def test_delivery_stops_retrying_after_max_attempts(self):
+        notification = EmailNotification.objects.create(
+            kind=EmailNotification.Kind.ORDER_PLACED,
+            recipient_email="undeliverable@example.com",
+            subject="Test",
+            text_body="Body",
+            delivery_state=EmailNotification.DeliveryState.FAILED,
+            attempt_count=MAX_DELIVERY_ATTEMPTS,
+        )
+
+        with mock.patch(
+            "dokan.notifications.EmailMultiAlternatives.send",
+            side_effect=AssertionError("should not attempt to send once the cap is reached"),
+        ):
+            result = deliver_email_notification(notification)
+
+        self.assertEqual(result.delivery_state, EmailNotification.DeliveryState.SKIPPED)
+
+    def test_queue_processor_excludes_notifications_past_the_cap(self):
+        maxed_out = EmailNotification.objects.create(
+            kind=EmailNotification.Kind.ORDER_PLACED,
+            recipient_email="undeliverable@example.com",
+            subject="Test",
+            text_body="Body",
+            delivery_state=EmailNotification.DeliveryState.FAILED,
+            attempt_count=MAX_DELIVERY_ATTEMPTS,
+        )
+
+        process_pending_email_queue(include_failed=True)
+
+        maxed_out.refresh_from_db()
+        self.assertEqual(maxed_out.attempt_count, MAX_DELIVERY_ATTEMPTS)
+        self.assertEqual(maxed_out.delivery_state, EmailNotification.DeliveryState.FAILED)
 
 
 class BrowseEnhancementTests(TestCase):

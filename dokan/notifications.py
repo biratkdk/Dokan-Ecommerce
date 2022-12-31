@@ -12,6 +12,9 @@ from .accounts import build_email_verification_token
 from .models import EmailNotification, Order, ReturnRequest, SupportMessage, SupportThread
 
 
+MAX_DELIVERY_ATTEMPTS = 5
+
+
 def _build_absolute_url(path: str, *, request=None) -> str:
     if request is not None:
         return request.build_absolute_uri(path)
@@ -108,6 +111,14 @@ def deliver_email_notification(notification: EmailNotification) -> EmailNotifica
     }:
         return notification
 
+    if notification.attempt_count >= MAX_DELIVERY_ATTEMPTS:
+        notification.delivery_state = EmailNotification.DeliveryState.SKIPPED
+        notification.error_message = (
+            f"Gave up after {notification.attempt_count} failed delivery attempts."
+        )
+        notification.save(update_fields=["delivery_state", "error_message", "updated_at"])
+        return notification
+
     if not notification.recipient_email:
         notification.delivery_state = EmailNotification.DeliveryState.SKIPPED
         notification.error_message = "Recipient email was blank."
@@ -145,9 +156,10 @@ def process_pending_email_queue(
     if include_failed:
         states.append(EmailNotification.DeliveryState.FAILED)
 
-    queryset = EmailNotification.objects.filter(delivery_state__in=states).order_by(
-        "created_at",
-        "pk",
+    queryset = (
+        EmailNotification.objects.filter(delivery_state__in=states)
+        .filter(attempt_count__lt=MAX_DELIVERY_ATTEMPTS)
+        .order_by("created_at", "pk")
     )
     if kinds:
         queryset = queryset.filter(kind__in=list(kinds))

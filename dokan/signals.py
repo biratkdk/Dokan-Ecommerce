@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
+
 from django.contrib.auth.models import Group, Permission
 from django.db.models.signals import post_delete, post_migrate, post_save
 from django.dispatch import receiver
 
 from .models import Item, ProductImage, StockLevel, Warehouse
 
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_WAREHOUSE_CODE = "CENTRAL"
 
@@ -183,18 +187,28 @@ def ensure_default_staff_groups(sender, **kwargs) -> None:
     if sender.name != "dokan":
         return
 
-    warehouse = _ensure_default_warehouse()
-    for group_name, permission_codenames in ROLE_MATRIX.items():
-        _sync_group(group_name, permission_codenames=permission_codenames)
-    for item in Item.objects.all().only("id", "stock", "reorder_level"):
-        if not StockLevel.objects.filter(item=item).exists():
-            StockLevel.objects.create(
-                warehouse=warehouse,
-                item=item,
-                on_hand=item.stock,
-                reserved=0,
-                safety_stock=item.reorder_level,
-            )
+    try:
+        warehouse = _ensure_default_warehouse()
+        for group_name, permission_codenames in ROLE_MATRIX.items():
+            _sync_group(group_name, permission_codenames=permission_codenames)
+
+        items_missing_stock_levels = Item.objects.exclude(
+            pk__in=StockLevel.objects.values("item_id")
+        ).only("id", "stock", "reorder_level")
+        StockLevel.objects.bulk_create(
+            [
+                StockLevel(
+                    warehouse=warehouse,
+                    item=item,
+                    on_hand=item.stock,
+                    reserved=0,
+                    safety_stock=item.reorder_level,
+                )
+                for item in items_missing_stock_levels
+            ]
+        )
+    except Exception:
+        logger.exception("post_migrate housekeeping (staff groups/stock levels) failed")
 
 
 @receiver(post_save, sender=Item)

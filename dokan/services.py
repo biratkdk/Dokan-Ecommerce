@@ -561,8 +561,14 @@ def transfer_stock(
 
 
 def _validate_coupon(order: Order) -> None:
-    if order.coupon and not order.coupon.is_available(order.subtotal):
+    if not order.coupon_id:
+        return
+    # Lock the coupon row so a concurrent checkout using the same coupon's
+    # last remaining use can't also pass this check before either commits.
+    locked_coupon = Coupon.objects.select_for_update().get(pk=order.coupon_id)
+    if not locked_coupon.is_available(order.subtotal):
         raise ValidationError("The selected coupon is no longer valid.")
+    order.coupon = locked_coupon
 
 
 def _consume_coupon(order: Order) -> None:
@@ -593,8 +599,18 @@ def add_item_to_cart(user, item: Item, quantity: int = 1) -> OrderItem:
 
     _ensure_checkout_allowed(user)
     _ensure_stock_levels_exist(item)
-    _sync_item_available_stock({item.pk})
-    item.refresh_from_db(fields=["stock"])
+
+    # Lock this item's stock rows so concurrent add-to-cart requests for the
+    # same item are serialized instead of both reading the same stale
+    # availability figure and both passing validation.
+    locked_levels = list(
+        StockLevel.objects.select_for_update().filter(
+            item_id=item.pk, warehouse__is_active=True
+        )
+    )
+    available = sum(max(level.on_hand - level.reserved, 0) for level in locked_levels)
+    Item.objects.filter(pk=item.pk).update(stock=available)
+    item.stock = available
 
     order, _ = Order.objects.get_or_create(user=user, status=Order.Status.CART)
     order_item, created = OrderItem.objects.select_for_update().get_or_create(
@@ -610,8 +626,8 @@ def add_item_to_cart(user, item: Item, quantity: int = 1) -> OrderItem:
         requested_quantity = order_item.quantity + quantity
         order_item.quantity = requested_quantity
 
-    if requested_quantity > item.stock:
-        raise ValidationError(f"Only {item.stock} units of {item.title} are available.")
+    if requested_quantity > available:
+        raise ValidationError(f"Only {available} units of {item.title} are available.")
 
     order_item.save()
     order.items.add(order_item)

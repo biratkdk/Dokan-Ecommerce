@@ -5,12 +5,19 @@ from decimal import Decimal
 from typing import Iterable, Sequence
 
 import numpy as np
+from django.core.cache import cache
+from django.db.models import Count, Max
 from django.utils import timezone
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .models import Item, Order, OrderItem
 from .services import get_active_order
+
+
+_CONTENT_MODEL_CACHE_KEY = "dokan:intelligence:content_model"
+_COLLABORATIVE_MODEL_CACHE_KEY = "dokan:intelligence:collaborative_model"
+_MODEL_CACHE_TIMEOUT = 300  # seconds
 
 
 STOP_WORDS = {
@@ -195,9 +202,29 @@ def _fit_content_model(catalog: Sequence[Item]) -> _ContentModel | None:
     return _ContentModel(index=index, items=items, vectorizer=vectorizer, matrix=matrix)
 
 
-def _get_content_model(pool: Iterable[Item] | None = None) -> _ContentModel | None:
-    catalog = list(pool) if pool is not None else list(Item.objects.active().with_metrics())
-    return _fit_content_model(catalog)
+def _catalog_version_key() -> str:
+    stats = Item.objects.active().aggregate(count=Count("id"), latest=Max("updated_at"))
+    return f"{stats['count']}:{stats['latest'].isoformat() if stats['latest'] else 'none'}"
+
+
+def _order_history_version_key() -> str:
+    stats = OrderItem.objects.filter(ordered=True).aggregate(count=Count("id"), latest=Max("updated_at"))
+    return f"{stats['count']}:{stats['latest'].isoformat() if stats['latest'] else 'none'}"
+
+
+def _get_full_catalog_content_model() -> _ContentModel | None:
+    """Content model over the whole active catalog, cached and reused across
+    requests instead of being refit from scratch on every call. Cache key is
+    versioned by catalog size + latest update time so edits invalidate it
+    automatically instead of relying on a blind TTL.
+    """
+    version = _catalog_version_key()
+    cached_version, cached_model = cache.get(_CONTENT_MODEL_CACHE_KEY, (None, None))
+    if cached_version == version:
+        return cached_model
+    model = _fit_content_model(list(Item.objects.active().with_metrics()))
+    cache.set(_CONTENT_MODEL_CACHE_KEY, (version, model), _MODEL_CACHE_TIMEOUT)
+    return model
 
 
 @dataclass
@@ -240,6 +267,21 @@ def _fit_collaborative_model() -> _CollaborativeModel | None:
     return _CollaborativeModel(index=index, similarity=similarity)
 
 
+def _get_cached_collaborative_model() -> _CollaborativeModel | None:
+    """Cached wrapper around `_fit_collaborative_model`, versioned by order
+    history size + latest update so it invalidates automatically when new
+    orders are placed. `evaluate_recommendations` calls the uncached function
+    directly since it wants a fresh fit for evaluation.
+    """
+    version = _order_history_version_key()
+    cached_version, cached_model = cache.get(_COLLABORATIVE_MODEL_CACHE_KEY, (None, None))
+    if cached_version == version:
+        return cached_model
+    model = _fit_collaborative_model()
+    cache.set(_COLLABORATIVE_MODEL_CACHE_KEY, (version, model), _MODEL_CACHE_TIMEOUT)
+    return model
+
+
 def recommend_items(
     source: Item,
     *,
@@ -251,7 +293,11 @@ def recommend_items(
     if not candidates:
         return []
 
-    model = _get_content_model([source, *candidates])
+    model = _get_full_catalog_content_model()
+    if model is None or source.pk not in model.index:
+        # Fall back to a direct fit if the caller passed items outside the
+        # cached active-catalog model (e.g. an inactive item).
+        model = _fit_content_model([source, *candidates])
     if model is None or source.pk not in model.index:
         return []
 
@@ -311,7 +357,7 @@ def recommend_for_order(order: Order, *, limit: int = 4) -> list[Recommendation]
     if not pool:
         return []
 
-    collaborative_model = _fit_collaborative_model()
+    collaborative_model = _get_cached_collaborative_model()
     pool_by_id = {item.pk: item for item in pool}
     aggregated_scores: dict[int, float] = {}
     reasons_by_item: dict[int, list[str]] = {}

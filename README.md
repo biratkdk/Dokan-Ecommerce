@@ -58,7 +58,7 @@ The runtime and framework choices are intentionally aligned to a stable, product
 - product detail pages with ratings and reviews
 - wishlist and compare features
 - recently viewed products
-- recommendation and ranked search signals
+- ML-based product recommendations and search (TF-IDF content similarity + item-based collaborative filtering, see [Recommendation Engine](#recommendation-engine))
 - low stock visibility on product pages
 
 ### Checkout and Orders
@@ -144,7 +144,7 @@ One of the strengths of this project is that the code is not organized as one gi
 - `dokan/notifications.py`
   - email outbox and delivery processing
 - `dokan/intelligence.py`
-  - recommendation, ranking, customer insight, and support suggestion logic
+  - ML recommendation/search engine (TF-IDF + item-based collaborative filtering), ranking, customer insight, and support suggestion logic
 - `dokan/admin_dashboard.py`
   - aggregated operational metrics for admin/internal dashboards
 - `dokan/signals.py`
@@ -368,6 +368,28 @@ Current suite status:
 
 - `40` tests passing
 
+## Recommendation Engine
+
+Product search and recommendations are powered by real machine learning, not keyword matching:
+
+- **Content-based search and "similar products"** — `dokan/intelligence.py` fits a
+  `TfidfVectorizer` (scikit-learn) over each product's title, description, category,
+  brand, tags, and attributes, then ranks results by cosine similarity. Catalog search
+  blends this semantic score with lexical exact/contains boosts on title and brand.
+- **"Customers who bought this also bought" (cart cross-sell)** — an item-based
+  collaborative filtering model built from historical order baskets. Item-item cosine
+  similarity is computed over co-purchase counts, the same family of technique used in
+  production recommender systems. Products with no order history yet (cold start) fall
+  back to the content-based model.
+- **Offline evaluation** — `python manage.py evaluate_recommendations` runs a
+  leave-one-out hit-rate@k evaluation over historical order baskets and reports the
+  collaborative-filtering model's hit rate against a popularity baseline, so the
+  recommendation quality is a measured number, not a claim.
+
+This replaced an earlier version of `intelligence.py` that used keyword/token-overlap
+heuristics labelled as an "AI assistant." The current version is a real, defensible ML
+implementation appropriate to cite in a viva.
+
 ## Why This Is Stronger Than a Basic Student Ecommerce Project
 
 Many final year ecommerce projects stop at:
@@ -389,6 +411,7 @@ This project goes further by including:
 - DRF API layer
 - deployment preparation
 - automated tests
+- a real ML recommendation/search engine with an offline evaluation harness
 
 That gives the project much better academic depth and much better viva value.
 

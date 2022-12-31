@@ -133,6 +133,26 @@ The repository was also improved around operational polish:
 
 These are not mandatory for a minimum submission, but they make the codebase much stronger and easier to defend in viva.
 
+## 9. Recommendation Engine Upgrade
+
+The original "AI assistant" framing for catalog search and recommendations was built
+on keyword/token-overlap heuristics. On closer review this was a credibility risk: it
+was labelled as intelligent behaviour but was not actually machine learning.
+
+This phase replaced it with a real recommendation engine:
+
+- TF-IDF vectorization (scikit-learn) over product text for content-based similarity
+- item-based collaborative filtering from historical order co-purchase data, used for
+  cart cross-sell recommendations
+- a structured historical order dataset (`0011_seed_recommendation_training_data`
+  migration) so the collaborative model has real co-purchase signal to learn from
+- an offline evaluation command (`evaluate_recommendations`) that reports hit-rate@k
+  for the collaborative model against a popularity baseline
+
+This phase matters academically because it turns a previously overstated feature into
+one that can survive direct questioning about what algorithm is running and why it
+performs better than a naive baseline.
+
 ## Semester-Oriented Summary
 
 If this project is explained in a semester timeline, the clearest breakdown is:

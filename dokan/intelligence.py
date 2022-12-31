@@ -4,9 +4,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable, Sequence
 
+import numpy as np
 from django.utils import timezone
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-from .models import Item, Order
+from .models import Item, Order, OrderItem
 from .services import get_active_order
 
 
@@ -110,34 +113,10 @@ def _tokenize_text(*parts: object) -> set[str]:
     return tokens
 
 
-def _tokenize_item(item: Item) -> set[str]:
-    item_parts: list[object] = [
-        item.title,
-        item.short_description,
-        item.description,
-        item.category_name,
-        item.brand_name,
-        item.sku,
-    ]
-    item_parts.extend(str(tag) for tag in item.tags)
-    for key, value in item.attributes.items():
-        item_parts.append(key)
-        item_parts.append(value)
-    return _tokenize_text(*item_parts)
-
-
 def _jaccard_similarity(left: set[str], right: set[str]) -> float:
     if not left or not right:
         return 0.0
     return len(left & right) / len(left | right)
-
-
-def _price_similarity(source: Item, candidate: Item) -> float:
-    source_price = float(source.unit_price)
-    candidate_price = float(candidate.unit_price)
-    denominator = max(source_price, candidate_price, 1.0)
-    gap = abs(source_price - candidate_price) / denominator
-    return max(0.0, 1.0 - gap)
 
 
 def _popularity_score(item: Item) -> float:
@@ -181,54 +160,124 @@ def estimate_days_to_stockout(item: Item) -> float:
     return round(item.stock / daily_demand, 1)
 
 
+def _item_document(item: Item) -> str:
+    """Flatten a product's text attributes into one document for TF-IDF."""
+    parts = [
+        item.title,
+        item.short_description,
+        item.description,
+        item.category_name,
+        item.brand_name,
+        " ".join(str(tag) for tag in item.tags),
+        " ".join(f"{key} {value}" for key, value in item.attributes.items()),
+    ]
+    return " ".join(str(part) for part in parts if part)
+
+
+@dataclass
+class _ContentModel:
+    """A TF-IDF vector space fitted over the active catalog."""
+
+    index: dict[int, int]
+    items: list[Item]
+    vectorizer: TfidfVectorizer
+    matrix: "np.ndarray"
+
+
+def _fit_content_model(catalog: Sequence[Item]) -> _ContentModel | None:
+    items = list(catalog)
+    if not items:
+        return None
+    documents = [_item_document(item) for item in items]
+    vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), min_df=1)
+    matrix = vectorizer.fit_transform(documents)
+    index = {item.pk: position for position, item in enumerate(items)}
+    return _ContentModel(index=index, items=items, vectorizer=vectorizer, matrix=matrix)
+
+
+def _get_content_model(pool: Iterable[Item] | None = None) -> _ContentModel | None:
+    catalog = list(pool) if pool is not None else list(Item.objects.active().with_metrics())
+    return _fit_content_model(catalog)
+
+
+@dataclass
+class _CollaborativeModel:
+    """Item-item cosine similarity over historical order baskets (item-based CF)."""
+
+    index: dict[int, int]
+    similarity: "np.ndarray"
+
+
+def _fit_collaborative_model() -> _CollaborativeModel | None:
+    basket_rows = OrderItem.objects.filter(ordered=True).values_list("orders__id", "item_id")
+    baskets: dict[int, set[int]] = {}
+    for order_id, item_id in basket_rows:
+        if order_id is None or item_id is None:
+            continue
+        baskets.setdefault(order_id, set()).add(item_id)
+
+    item_ids = sorted({item_id for basket in baskets.values() for item_id in basket})
+    if len(item_ids) < 2:
+        return None
+
+    index = {item_id: position for position, item_id in enumerate(item_ids)}
+    size = len(item_ids)
+    co_occurrence = np.zeros((size, size), dtype=float)
+    appearances = np.zeros(size, dtype=float)
+
+    for basket in baskets.values():
+        positions = [index[item_id] for item_id in basket]
+        for position in positions:
+            appearances[position] += 1
+        for row in positions:
+            for column in positions:
+                if row != column:
+                    co_occurrence[row, column] += 1
+
+    denominator = np.sqrt(np.outer(appearances, appearances))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        similarity = np.where(denominator > 0, co_occurrence / denominator, 0.0)
+    return _CollaborativeModel(index=index, similarity=similarity)
+
+
 def recommend_items(
     source: Item,
     *,
     pool: Iterable[Item] | None = None,
     limit: int = 4,
 ) -> list[Recommendation]:
-    pool = pool or Item.objects.active().with_metrics().exclude(pk=source.pk)
-    source_tokens = _tokenize_item(source)
-    recommendations: list[Recommendation] = []
+    """Content-based recommendations using TF-IDF cosine similarity over product text."""
+    candidates = [item for item in (pool or Item.objects.active().with_metrics()) if item.pk != source.pk]
+    if not candidates:
+        return []
 
-    for candidate in pool:
-        if candidate.pk == source.pk:
+    model = _get_content_model([source, *candidates])
+    if model is None or source.pk not in model.index:
+        return []
+
+    source_vector = model.matrix[model.index[source.pk]]
+    similarities = cosine_similarity(source_vector, model.matrix).flatten()
+
+    recommendations: list[Recommendation] = []
+    for candidate in candidates:
+        position = model.index.get(candidate.pk)
+        if position is None:
+            continue
+        content_score = float(similarities[position])
+        category_bonus = 0.05 if candidate.catalog_category_id == source.catalog_category_id else 0.0
+        brand_bonus = 0.05 if source.brand_id and candidate.brand_id == source.brand_id else 0.0
+        rating_bonus = (candidate.average_rating / 5.0) * 0.05
+        score = min(content_score + category_bonus + brand_bonus + rating_bonus, 1.0)
+        if score <= 0:
             continue
 
-        candidate_tokens = _tokenize_item(candidate)
-        category_score = (
-            1.0
-            if candidate.catalog_category_id == source.catalog_category_id
-            else 0.4
-            if candidate.category == source.category
-            else 0.0
-        )
-        brand_score = 1.0 if source.brand_id and candidate.brand_id == source.brand_id else 0.0
-        token_score = _jaccard_similarity(source_tokens, candidate_tokens)
-        price_score = _price_similarity(source, candidate)
-        popularity = _popularity_score(candidate)
-        rating_score = candidate.average_rating / 5.0
-        discount_bonus = 0.05 if candidate.has_discount else 0.0
-
-        score = (
-            category_score * 0.32
-            + brand_score * 0.18
-            + token_score * 0.18
-            + price_score * 0.16
-            + popularity * 0.08
-            + rating_score * 0.08
-            + discount_bonus
-        )
-
         reasons: list[str] = []
-        if category_score >= 1.0:
+        if content_score >= 0.35:
+            reasons.append("High text similarity (TF-IDF cosine)")
+        if category_bonus:
             reasons.append(f"Same category: {source.category_name}")
-        if brand_score >= 1.0:
+        if brand_bonus:
             reasons.append(f"Same brand: {source.brand_name}")
-        if token_score >= 0.2:
-            reasons.append("Similar product attributes and keywords")
-        if price_score >= 0.7:
-            reasons.append("Comparable price range")
         if candidate.average_rating >= 4.0:
             reasons.append("Strong customer rating")
 
@@ -236,7 +285,7 @@ def recommend_items(
             Recommendation(
                 item=candidate,
                 score=round(score * 100.0, 2),
-                reasons=reasons[:3] or ["Good portfolio fit for this product"],
+                reasons=reasons[:3] or ["Similar product profile"],
             )
         )
 
@@ -247,25 +296,64 @@ def recommend_items(
 
 
 def recommend_for_order(order: Order, *, limit: int = 4) -> list[Recommendation]:
+    """Item-based collaborative filtering ("customers who bought this also bought")
+    over historical co-purchase baskets, falling back to content-based similarity
+    for items with no order history yet (cold start).
+    """
     cart_items = [order_item.item for order_item in order.items.select_related("item")]
     if not cart_items:
         return []
 
+    cart_item_ids = {item.pk for item in cart_items}
     pool = list(
-        Item.objects.active().with_metrics().exclude(pk__in=[item.pk for item in cart_items])
+        Item.objects.active().with_metrics().exclude(pk__in=cart_item_ids)
     )
-    aggregated: dict[int, Recommendation] = {}
+    if not pool:
+        return []
 
-    for source in cart_items:
-        for recommendation in recommend_items(source, pool=pool, limit=limit * 2):
-            existing = aggregated.get(recommendation.item.pk)
-            if not existing or recommendation.score > existing.score:
-                aggregated[recommendation.item.pk] = recommendation
+    collaborative_model = _fit_collaborative_model()
+    pool_by_id = {item.pk: item for item in pool}
+    aggregated_scores: dict[int, float] = {}
+    reasons_by_item: dict[int, list[str]] = {}
 
-    return sorted(
-        aggregated.values(),
-        key=lambda entry: (-entry.score, entry.item.title),
-    )[:limit]
+    if collaborative_model is not None:
+        for source in cart_items:
+            source_position = collaborative_model.index.get(source.pk)
+            if source_position is None:
+                continue
+            for candidate_id, candidate_position in collaborative_model.index.items():
+                if candidate_id not in pool_by_id:
+                    continue
+                similarity = float(collaborative_model.similarity[source_position, candidate_position])
+                if similarity <= 0:
+                    continue
+                if similarity > aggregated_scores.get(candidate_id, 0.0):
+                    aggregated_scores[candidate_id] = similarity
+                    reasons_by_item[candidate_id] = [
+                        f"Frequently bought with {source.title}",
+                        "Item-based collaborative filtering",
+                    ]
+
+    cold_start_sources = [item for item in cart_items if not collaborative_model or item.pk not in collaborative_model.index]
+    if cold_start_sources:
+        for source in cold_start_sources:
+            for recommendation in recommend_items(source, pool=pool, limit=limit * 2):
+                normalized = recommendation.score / 100.0
+                if normalized > aggregated_scores.get(recommendation.item.pk, 0.0):
+                    aggregated_scores[recommendation.item.pk] = normalized
+                    reasons_by_item[recommendation.item.pk] = recommendation.reasons
+
+    recommendations = [
+        Recommendation(
+            item=pool_by_id[item_id],
+            score=round(score * 100.0, 2),
+            reasons=reasons_by_item.get(item_id, ["Relevant cross-sell match"]),
+        )
+        for item_id, score in aggregated_scores.items()
+        if item_id in pool_by_id
+    ]
+    recommendations.sort(key=lambda entry: (-entry.score, entry.item.title))
+    return recommendations[:limit]
 
 
 def rank_catalog_search(
@@ -274,43 +362,53 @@ def rank_catalog_search(
     queryset: Sequence[Item] | Iterable[Item] | None = None,
     limit: int | None = None,
 ) -> list[SearchResult]:
-    query_tokens = _tokenize_text(query)
-    if not query_tokens:
+    """Hybrid catalog search: TF-IDF/cosine semantic similarity blended with
+    lexical exact/contains boosts on title, brand, and category.
+    """
+    normalized_query = query.strip().lower()
+    if not normalized_query:
         return []
 
-    catalog = queryset or Item.objects.active().with_metrics()
-    results: list[SearchResult] = []
-    normalized_query = query.lower()
+    catalog = list(queryset) if queryset is not None else list(Item.objects.active().with_metrics())
+    if not catalog:
+        return []
 
+    model = _fit_content_model(catalog)
+    if model is None:
+        return []
+
+    query_vector = model.vectorizer.transform([query])
+    similarities = cosine_similarity(query_vector, model.matrix).flatten()
+
+    results: list[SearchResult] = []
     for item in catalog:
-        item_tokens = _tokenize_item(item)
-        token_score = _jaccard_similarity(query_tokens, item_tokens)
+        position = model.index.get(item.pk)
+        if position is None:
+            continue
+        content_score = float(similarities[position])
+
         title_text = item.title.lower()
         brand_text = item.brand_name.lower()
         category_text = item.category_name.lower()
-        description_text = f"{item.short_description} {item.description}".lower()
 
-        exact_title_boost = 1.0 if normalized_query == title_text else 0.0
-        title_contains_boost = 0.7 if normalized_query in title_text else 0.0
-        brand_boost = 0.45 if normalized_query in brand_text else 0.0
-        category_boost = 0.35 if normalized_query in category_text else 0.0
-        description_boost = 0.2 if normalized_query in description_text else 0.0
-        popularity = _popularity_score(item)
-        rating_score = item.average_rating / 5.0
-        availability_score = 0.15 if item.stock > 0 else 0.0
-        discount_bonus = 0.05 if item.has_discount else 0.0
+        exact_title_boost = 0.35 if normalized_query == title_text else 0.0
+        title_contains_boost = 0.2 if normalized_query in title_text else 0.0
+        brand_boost = 0.1 if normalized_query in brand_text else 0.0
+        category_boost = 0.08 if normalized_query in category_text else 0.0
+        popularity = _popularity_score(item) * 0.05
+        rating_score = (item.average_rating / 5.0) * 0.05
+        availability_score = 0.05 if item.stock > 0 else 0.0
 
-        score = (
-            exact_title_boost * 0.35
-            + title_contains_boost * 0.22
-            + brand_boost * 0.12
-            + category_boost * 0.08
-            + description_boost * 0.05
-            + token_score * 0.22
-            + popularity * 0.06
-            + rating_score * 0.05
-            + availability_score
-            + discount_bonus
+        score = min(
+            content_score
+            + exact_title_boost
+            + title_contains_boost
+            + brand_boost
+            + category_boost
+            + popularity
+            + rating_score
+            + availability_score,
+            1.0,
         )
 
         if score <= 0:
@@ -325,8 +423,8 @@ def rank_catalog_search(
             reasons.append(f"Brand match: {item.brand_name}")
         if category_boost:
             reasons.append(f"Category match: {item.category_name}")
-        if token_score >= 0.2:
-            reasons.append("Description and attribute similarity")
+        if content_score >= 0.2:
+            reasons.append("TF-IDF semantic similarity")
         if item.stock > 0:
             reasons.append(item.inventory_status)
 

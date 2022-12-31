@@ -30,6 +30,12 @@ jobs:
           DJANGO_SECURE_SSL_REDIRECT: "0"
         run: python manage.py check
 
+      - name: Collect static files
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_SECURE_SSL_REDIRECT: "0"
+        run: python manage.py collectstatic --noinput
+
       - name: Run test suite
         env:
           DJANGO_DEBUG: "0"

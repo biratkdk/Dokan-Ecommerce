@@ -27,9 +27,11 @@ jobs:
       - name: Run Django checks
         env:
           DJANGO_DEBUG: "0"
+          DJANGO_SECURE_SSL_REDIRECT: "0"
         run: python manage.py check
 
       - name: Run test suite
         env:
           DJANGO_DEBUG: "0"
+          DJANGO_SECURE_SSL_REDIRECT: "0"
         run: python manage.py test

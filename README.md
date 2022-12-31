@@ -1,6 +1,19 @@
 # Dokan Ecommerce
 
-Dokan Ecommerce is a final year Django ecommerce project presented through a Redstore-style storefront. The project started as an academic commerce system and was expanded into a more complete platform with transactional checkout, payment handling, warehouse-aware inventory control, support workflows, analytics, and API integration.
+[![CI](https://github.com/biratkdk/Dokan-Ecommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/biratkdk/Dokan-Ecommerce/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10-blue.svg)](runtime.txt)
+[![Django](https://img.shields.io/badge/django-4.1-092e20.svg)](requirements.txt)
+
+A production-shaped Django ecommerce platform built as a Fall 2022 final year
+project: real Stripe checkout with webhook-driven order finalization,
+multi-warehouse inventory with a full stock movement ledger, a dual API
+surface (legacy JSON + DRF v2 with OpenAPI/Swagger docs), role-gated internal
+dashboards, and a real machine-learning recommendation engine (TF-IDF content
+similarity + item-based collaborative filtering, evaluated against a
+popularity baseline — not a keyword-matching demo dressed up as "AI").
+
+Live demo: [dokan-ecommerce.onrender.com](https://dokan-ecommerce.onrender.com/) &middot; API docs: `/api/docs/`
 
 This repository is written and maintained like a serious student capstone, not a basic CRUD submission. The codebase is structured around clear business modules, testable services, and a stable Python/Django stack.
 
@@ -475,6 +488,10 @@ This project demonstrates practical application of:
 - operational tooling
 - test-driven verification
 - production deployment basics
+
+## License
+
+MIT &mdash; see [LICENSE](LICENSE).
 
 ## Author
 

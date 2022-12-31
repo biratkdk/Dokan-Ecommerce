@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Control | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <div>
+                <p class="segment-eyebrow">Inventory Control</p>
+                <h2>Warehouse and Reservation Network</h2>
+                <p>Monitor warehouse capacity, low-stock exposure, active order holds, and the fulfillment queue from one internal surface.</p>
+            </div>
+            <a href="{% url 'store:operations-dashboard' %}" class="btn compact-btn">Back to Operations</a>
+        </div>
+
+        <div class="operations-metric-grid">
+            <article class="operations-metric-card">
+                <span>Active Warehouses</span>
+                <strong>{{ inventory_metrics.active_warehouses }}</strong>
+                <small>Operational warehouse nodes</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Stock Levels</span>
+                <strong>{{ inventory_metrics.stock_level_count }}</strong>
+                <small>Warehouse-product inventory records</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Available Units</span>
+                <strong>{{ inventory_metrics.network_available }}</strong>
+                <small>{{ inventory_metrics.network_reserved }} currently reserved</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>At-Risk Levels</span>
+                <strong>{{ inventory_metrics.at_risk_stock_levels }}</strong>
+                <small>Available quantity at or below safety stock</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Active Reservations</span>
+                <strong>{{ inventory_metrics.active_reservations }}</strong>
+                <small>Orders holding stock across warehouses</small>
+            </article>
+        </div>
+
+        {% if can_manage_inventory_network %}
+            <div class="dashboard-layout">
+                <section class="dashboard-panel">
+                    <h3>Controlled Stock Adjustments</h3>
+                    <p>Route every on-hand correction through the inventory service so stock changes are logged, validated, and reflected in the storefront cache.</p>
+                    <form method="post" action="{% url 'store:inventory-adjustment' %}">
+                        {% csrf_token %}
+                        {% if adjustment_form.non_field_errors %}
+                            <div class="form-errors">{{ adjustment_form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="form-grid">
+                            <div class="field-group">{{ adjustment_form.item.label_tag }}{{ adjustment_form.item }}{{ adjustment_form.item.errors }}</div>
+                            <div class="field-group">{{ adjustment_form.warehouse.label_tag }}{{ adjustment_form.warehouse }}{{ adjustment_form.warehouse.errors }}</div>
+                            <div class="field-group">{{ adjustment_form.direction.label_tag }}{{ adjustment_form.direction }}{{ adjustment_form.direction.errors }}</div>
+                            <div class="field-group">{{ adjustment_form.quantity.label_tag }}{{ adjustment_form.quantity }}{{ adjustment_form.quantity.errors }}</div>
+                            <div class="field-group">{{ adjustment_form.reason.label_tag }}{{ adjustment_form.reason }}{{ adjustment_form.reason.errors }}</div>
+                            <div class="field-group">{{ adjustment_form.reference.label_tag }}{{ adjustment_form.reference }}{{ adjustment_form.reference.errors }}</div>
+                        </div>
+                        <button type="submit" class="btn compact-btn">Apply Adjustment</button>
+                    </form>
+                </section>
+
+                <section class="dashboard-panel">
+                    <h3>Warehouse Transfers</h3>
+                    <p>Move inventory between fulfillment nodes using a paired transfer log instead of editing stock levels manually.</p>
+                    <form method="post" action="{% url 'store:inventory-transfer' %}">
+                        {% csrf_token %}
+                        {% if transfer_form.non_field_errors %}
+                            <div class="form-errors">{{ transfer_form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="form-grid">
+                            <div class="field-group">{{ transfer_form.item.label_tag }}{{ transfer_form.item }}{{ transfer_form.item.errors }}</div>
+                            <div class="field-group">{{ transfer_form.quantity.label_tag }}{{ transfer_form.quantity }}{{ transfer_form.quantity.errors }}</div>
+                            <div class="field-group">{{ transfer_form.source_warehouse.label_tag }}{{ transfer_form.source_warehouse }}{{ transfer_form.source_warehouse.errors }}</div>
+                            <div class="field-group">{{ transfer_form.destination_warehouse.label_tag }}{{ transfer_form.destination_warehouse }}{{ transfer_form.destination_warehouse.errors }}</div>
+                            <div class="field-group">{{ transfer_form.reason.label_tag }}{{ transfer_form.reason }}{{ transfer_form.reason.errors }}</div>
+                            <div class="field-group">{{ transfer_form.reference.label_tag }}{{ transfer_form.reference }}{{ transfer_form.reference.errors }}</div>
+                        </div>
+                        <button type="submit" class="btn compact-btn">Record Transfer</button>
+                    </form>
+                </section>
+            </div>
+        {% endif %}
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Warehouse Capacity</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Warehouse</th>
+                            <th>Items</th>
+                            <th>On Hand</th>
+                            <th>Reserved</th>
+                            <th>Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in warehouse_rows %}
+                            <tr>
+                                <td>{{ row.warehouse.code }} - {{ row.warehouse.name }}</td>
+                                <td>{{ row.item_count }}</td>
+                                <td>{{ row.on_hand_total }}</td>
+                                <td>{{ row.reserved_total }}</td>
+                                <td>{{ row.available_total }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">No warehouses are configured.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Low Stock Exposure</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th>Available</th>
+                            <th>Safety</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock_level in low_stock_levels %}
+                            <tr>
+                                <td>{{ stock_level.item.title }}</td>
+                                <td>{{ stock_level.warehouse.code }}</td>
+                                <td>{{ stock_level.available_quantity }}</td>
+                                <td>{{ stock_level.safety_stock }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">No stock levels are below their safety threshold.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Active Reservations</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th>Qty</th>
+                            <th>Expires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reservation in active_reservations %}
+                            <tr>
+                                <td>{{ reservation.order.reference }}</td>
+                                <td>{{ reservation.item.title }}</td>
+                                <td>{{ reservation.warehouse.code }}</td>
+                                <td>{{ reservation.quantity }}</td>
+                                <td>{% if reservation.expires_at %}{{ reservation.expires_at|date:"M d, H:i" }}{% else %}n/a{% endif %}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">No active reservations.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Fulfillment Queue</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Items</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in fulfillment_queue %}
+                            <tr>
+                                <td>{{ order.reference }}</td>
+                                <td>{{ order.get_status_display }}</td>
+                                <td>{{ order.get_payment_status_display }}</td>
+                                <td>{{ order.total_items }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4">No orders currently in the fulfillment queue.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Recent Stock Movements</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th>Type</th>
+                            <th>On Hand</th>
+                            <th>Reserved</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in recent_stock_movements %}
+                            <tr>
+                                <td>{{ movement.created_at|date:"M d, H:i" }}</td>
+                                <td>{{ movement.item.title }}</td>
+                                <td>
+                                    {{ movement.warehouse.code }}
+                                    {% if movement.related_warehouse %}&rarr; {{ movement.related_warehouse.code }}{% endif %}
+                                </td>
+                                <td>{{ movement.get_movement_type_display }}</td>
+                                <td>{{ movement.on_hand_delta }}</td>
+                                <td>{{ movement.reserved_delta }}</td>
+                                <td>{{ movement.reference|default:"-" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7">No stock movements have been recorded yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </div>
+{% endblock %}

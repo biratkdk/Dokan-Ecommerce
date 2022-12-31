@@ -11,7 +11,7 @@
                 {% for entry in wishlist_entries %}
                     <div class="col-4">
                         <a href="{{ entry.item.get_absolute_url }}">
-                            <img src="{% static entry.item.primary_image %}" alt="{{ entry.item.title }}">
+                            <img src="{{ entry.item.primary_image }}" alt="{{ entry.item.title }}">
                         </a>
                         <span class="product-badge">{{ entry.item.brand_name }}</span>
                         <a href="{{ entry.item.get_absolute_url }}"><h4>{{ entry.item.title }}</h4></a>
@@ -44,3 +44,4 @@
         {% endif %}
     </div>
 {% endblock %}
+

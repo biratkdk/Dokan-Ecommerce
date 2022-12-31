@@ -6,7 +6,15 @@
     <div class="small-container">
         <div class="row row-2">
             <h2>Account Dashboard</h2>
-            <a href="{% url 'store:support-threads' %}" class="btn compact-btn">Open Support</a>
+            <div class="card-actions">
+                <a href="{% url 'store:account-settings' %}" class="secondary-chip">Settings</a>
+                {% if can_view_inventory_dashboard %}
+                    <a href="{% url 'store:inventory-dashboard' %}" class="secondary-chip">Inventory</a>
+                {% elif can_view_operations_dashboard %}
+                    <a href="{% url 'store:operations-dashboard' %}" class="secondary-chip">Operations</a>
+                {% endif %}
+                <a href="{% url 'store:support-threads' %}" class="btn compact-btn">Open Support</a>
+            </div>
         </div>
 
         <div class="dashboard-layout">
@@ -71,7 +79,7 @@
                         {% for thread in support_threads %}
                             <a href="{% url 'store:support-thread-detail' thread.id %}" class="dashboard-list-card dashboard-link-card">
                                 <strong>{{ thread.subject }}</strong>
-                                <span>{{ thread.get_status_display }} • {{ thread.get_priority_display }}</span>
+                                <span>{{ thread.get_status_display }} | {{ thread.get_priority_display }}</span>
                                 <p>{{ thread.get_category_display }}</p>
                             </a>
                         {% endfor %}
@@ -108,7 +116,7 @@
                         {% for order in recent_orders %}
                             <div class="dashboard-list-card">
                                 <strong>{{ order.reference }}</strong>
-                                <span>{{ order.get_status_display }} • {{ order.get_payment_status_display }}</span>
+                                <span>{{ order.get_status_display }} | {{ order.get_payment_status_display }}</span>
                                 <p>${{ order.total|floatformat:2 }}</p>
                             </div>
                         {% endfor %}

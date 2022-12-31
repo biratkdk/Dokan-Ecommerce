@@ -43,6 +43,15 @@ def mark_email_verified(user) -> CustomerProfile:
     return profile
 
 
+@transaction.atomic
+def mark_email_unverified(user) -> CustomerProfile:
+    profile = ensure_customer_profile(user)
+    profile.email_verified = False
+    profile.email_verified_at = None
+    profile.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+    return profile
+
+
 def _extract_client_ip(request) -> str:
     forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
     if forwarded_for:

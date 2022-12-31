@@ -1,13 +1,60 @@
-from django.urls import path
+from django.contrib.auth import views as auth_views
+from django.urls import path, reverse_lazy
 
-from . import api_views, views
+from . import api_v2_views, api_views, views
+from .forms import PasswordResetConfirmForm, PasswordResetRequestForm
 
 app_name = "store"
 
 urlpatterns = [
     path("", views.HomeView.as_view(), name="home"),
     path("account/", views.AccountLoginView.as_view(), name="login"),
+    path(
+        "account/password-reset/",
+        auth_views.PasswordResetView.as_view(
+            template_name="password_reset_form.html",
+            email_template_name="emails/password_reset_email.txt",
+            subject_template_name="emails/password_reset_subject.txt",
+            form_class=PasswordResetRequestForm,
+            success_url=reverse_lazy("store:password-reset-done"),
+        ),
+        name="password-reset",
+    ),
+    path(
+        "account/password-reset/done/",
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="password_reset_done.html",
+        ),
+        name="password-reset-done",
+    ),
+    path(
+        "account/reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="password_reset_confirm.html",
+            form_class=PasswordResetConfirmForm,
+            success_url=reverse_lazy("store:password-reset-complete"),
+        ),
+        name="password-reset-confirm",
+    ),
+    path(
+        "account/reset/complete/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="password_reset_complete.html",
+        ),
+        name="password-reset-complete",
+    ),
     path("dashboard/", views.AccountDashboardView.as_view(), name="account-dashboard"),
+    path("dashboard/settings/", views.AccountSettingsView.as_view(), name="account-settings"),
+    path("dashboard/settings/profile/", views.AccountProfileUpdateView.as_view(), name="account-profile-update"),
+    path("dashboard/settings/password/", views.AccountPasswordChangeView.as_view(), name="account-password-change"),
+    path("dashboard/settings/addresses/", views.AccountAddressUpsertView.as_view(), name="account-address-add"),
+    path("dashboard/settings/addresses/<int:address_id>/edit/", views.AccountAddressUpsertView.as_view(), name="account-address-edit"),
+    path("dashboard/settings/addresses/<int:address_id>/delete/", views.AccountAddressDeleteView.as_view(), name="account-address-delete"),
+    path("dashboard/settings/addresses/<int:address_id>/default/", views.AccountAddressDefaultView.as_view(), name="account-address-default"),
+    path("operations/overview/", views.OperationsDashboardView.as_view(), name="operations-dashboard"),
+    path("operations/inventory/", views.InventoryDashboardView.as_view(), name="inventory-dashboard"),
+    path("operations/inventory/adjustments/", views.InventoryAdjustmentView.as_view(), name="inventory-adjustment"),
+    path("operations/inventory/transfers/", views.InventoryTransferView.as_view(), name="inventory-transfer"),
     path("signup/", views.SignUpView.as_view(), name="signup"),
     path("account/verify/<str:token>/", views.VerifyEmailView.as_view(), name="verify-email"),
     path("account/verify/resend/", views.ResendVerificationEmailView.as_view(), name="resend-verification-email"),
@@ -52,4 +99,21 @@ urlpatterns = [
     path("api/v1/support/threads/", api_views.api_support_threads, name="api-support-threads"),
     path("api/v1/support/threads/<int:thread_id>/", api_views.api_support_thread_detail, name="api-support-thread-detail"),
     path("api/v1/wishlist/<slug:slug>/toggle/", api_views.api_wishlist_toggle, name="api-wishlist-toggle"),
+    path("api/v2/", api_v2_views.ApiV2RootView.as_view(), name="api-v2-root"),
+    path("api/v2/catalog/", api_v2_views.CatalogListV2View.as_view(), name="api-v2-catalog"),
+    path("api/v2/auth/token/", api_v2_views.ApiTokenV2View.as_view(), name="api-v2-auth-token"),
+    path("api/v2/account/profile/", api_v2_views.AccountProfileV2View.as_view(), name="api-v2-account-profile"),
+    path("api/v2/account/security/", api_v2_views.AccountSecurityV2View.as_view(), name="api-v2-account-security"),
+    path("api/v2/account/access/", api_v2_views.AccountAccessV2View.as_view(), name="api-v2-account-access"),
+    path("api/v2/account/password/", api_v2_views.AccountPasswordV2View.as_view(), name="api-v2-account-password"),
+    path("api/v2/account/addresses/", api_v2_views.AddressListCreateV2View.as_view(), name="api-v2-account-addresses"),
+    path("api/v2/account/addresses/<int:address_id>/", api_v2_views.AddressDetailV2View.as_view(), name="api-v2-account-address-detail"),
+    path("api/v2/account/addresses/<int:address_id>/default/", api_v2_views.AddressDefaultV2View.as_view(), name="api-v2-account-address-default"),
+    path("api/v2/orders/<str:reference>/reservations/", api_v2_views.OrderReservationsV2View.as_view(), name="api-v2-order-reservations"),
+    path("api/v2/inventory/overview/", api_v2_views.InventoryOverviewV2View.as_view(), name="api-v2-inventory-overview"),
+    path("api/v2/inventory/warehouses/", api_v2_views.InventoryWarehousesV2View.as_view(), name="api-v2-inventory-warehouses"),
+    path("api/v2/inventory/reservations/active/", api_v2_views.InventoryActiveReservationsV2View.as_view(), name="api-v2-inventory-active-reservations"),
+    path("api/v2/inventory/movements/", api_v2_views.InventoryMovementsV2View.as_view(), name="api-v2-inventory-movements"),
+    path("api/v2/inventory/adjustments/", api_v2_views.InventoryAdjustmentV2View.as_view(), name="api-v2-inventory-adjustments"),
+    path("api/v2/inventory/transfers/", api_v2_views.InventoryTransferV2View.as_view(), name="api-v2-inventory-transfers"),
 ]

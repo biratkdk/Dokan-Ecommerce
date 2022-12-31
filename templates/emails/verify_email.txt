@@ -1,6 +1,6 @@
 Hello {{ user.username }},
 
-Verify your Redstore account email to unlock the full 2022-style account security flow.
+Verify your Redstore account email to unlock the full Redstore account security flow.
 
 Verification link:
 {{ verification_url }}

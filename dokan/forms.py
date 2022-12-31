@@ -1,8 +1,24 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordChangeForm,
+    PasswordResetForm,
+    SetPasswordForm,
+    UserCreationForm,
+)
 
-from .models import Order, ProductReview, ReturnRequest, SupportMessage, SupportThread
+from .models import (
+    Address,
+    CustomerProfile,
+    Item,
+    Order,
+    ProductReview,
+    ReturnRequest,
+    Warehouse,
+    SupportMessage,
+    SupportThread,
+)
 
 
 User = get_user_model()
@@ -62,6 +78,221 @@ class SignUpForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class PasswordResetRequestForm(PasswordResetForm):
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={"class": "auth-input", "placeholder": "Email address"}
+        ),
+    )
+
+
+class PasswordResetConfirmForm(SetPasswordForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["new_password1"].widget.attrs.update(
+            {"class": "auth-input", "placeholder": "Create a new password"}
+        )
+        self.fields["new_password2"].widget.attrs.update(
+            {"class": "auth-input", "placeholder": "Confirm the new password"}
+        )
+
+
+class AccountIdentityForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "email"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        placeholders = {
+            "username": "Username",
+            "first_name": "First name",
+            "last_name": "Last name",
+            "email": "Email address",
+        }
+        for field_name, placeholder in placeholders.items():
+            _apply_input_style(self.fields[field_name], placeholder=placeholder)
+
+
+class CustomerProfileSettingsForm(forms.ModelForm):
+    class Meta:
+        model = CustomerProfile
+        fields = [
+            "phone_number",
+            "company_name",
+            "job_title",
+            "preferred_contact_channel",
+            "marketing_opt_in",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        placeholders = {
+            "phone_number": "Primary phone number",
+            "company_name": "Company or organization",
+            "job_title": "Job title",
+        }
+        for field_name, placeholder in placeholders.items():
+            _apply_input_style(self.fields[field_name], placeholder=placeholder)
+        _apply_input_style(self.fields["preferred_contact_channel"])
+
+
+class AddressBookForm(forms.ModelForm):
+    class Meta:
+        model = Address
+        fields = [
+            "full_name",
+            "phone_number",
+            "street_address",
+            "apartment_address",
+            "city",
+            "state",
+            "country",
+            "postal_code",
+            "address_type",
+            "default",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        placeholders = {
+            "full_name": "Full name",
+            "phone_number": "Phone number",
+            "street_address": "Street address",
+            "apartment_address": "Apartment, suite, etc. (optional)",
+            "city": "City",
+            "state": "State or province",
+            "country": "Country",
+            "postal_code": "Postal code",
+        }
+        for field_name, placeholder in placeholders.items():
+            _apply_input_style(self.fields[field_name], placeholder=placeholder)
+        _apply_input_style(self.fields["address_type"])
+
+
+class AccountPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        placeholders = {
+            "old_password": "Current password",
+            "new_password1": "New password",
+            "new_password2": "Confirm new password",
+        }
+        for field_name, placeholder in placeholders.items():
+            self.fields[field_name].widget.attrs.update(
+                {"class": "auth-input", "placeholder": placeholder}
+            )
+
+
+class InventoryAdjustmentForm(forms.Form):
+    DIRECTION_IN = "increase"
+    DIRECTION_OUT = "decrease"
+
+    item = forms.ModelChoiceField(
+        queryset=Item.objects.none(),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.none(),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    direction = forms.ChoiceField(
+        choices=(
+            (DIRECTION_IN, "Increase on-hand stock"),
+            (DIRECTION_OUT, "Decrease on-hand stock"),
+        ),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    quantity = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(attrs={"class": "checkout-input", "min": 1}),
+    )
+    reason = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(
+            attrs={
+                "class": "checkout-input",
+                "placeholder": "Reason for the stock adjustment",
+            }
+        ),
+    )
+    reference = forms.CharField(
+        max_length=80,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "checkout-input",
+                "placeholder": "Reference ID (optional)",
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["item"].queryset = Item.objects.active().order_by("title")
+        self.fields["warehouse"].queryset = Warehouse.objects.filter(is_active=True).order_by(
+            "priority",
+            "name",
+        )
+
+
+class InventoryTransferForm(forms.Form):
+    item = forms.ModelChoiceField(
+        queryset=Item.objects.none(),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    source_warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.none(),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    destination_warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.none(),
+        widget=forms.Select(attrs={"class": "checkout-input"}),
+    )
+    quantity = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(attrs={"class": "checkout-input", "min": 1}),
+    )
+    reason = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(
+            attrs={
+                "class": "checkout-input",
+                "placeholder": "Reason for the warehouse transfer",
+            }
+        ),
+    )
+    reference = forms.CharField(
+        max_length=80,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "checkout-input",
+                "placeholder": "Transfer or batch reference (optional)",
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        active_warehouses = Warehouse.objects.filter(is_active=True).order_by("priority", "name")
+        self.fields["item"].queryset = Item.objects.active().order_by("title")
+        self.fields["source_warehouse"].queryset = active_warehouses
+        self.fields["destination_warehouse"].queryset = active_warehouses
+
+    def clean(self):
+        cleaned_data = super().clean()
+        source_warehouse = cleaned_data.get("source_warehouse")
+        destination_warehouse = cleaned_data.get("destination_warehouse")
+        if (
+            source_warehouse
+            and destination_warehouse
+            and source_warehouse.pk == destination_warehouse.pk
+        ):
+            raise forms.ValidationError("Choose two different warehouses for a transfer.")
+        return cleaned_data
 
 
 class AddToCartForm(forms.Form):

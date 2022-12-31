@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Operations Overview | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <div>
+                <p class="segment-eyebrow">Internal Operations</p>
+                <h2>Store Operations Overview</h2>
+                <p>Revenue, support workload, payment mix, merchandising performance, and inventory risk for the internal team.</p>
+            </div>
+            {% if can_view_inventory_dashboard %}
+                <a href="{% url 'store:inventory-dashboard' %}" class="btn compact-btn">Open Inventory Control</a>
+            {% endif %}
+        </div>
+
+        <div class="operations-metric-grid">
+            <article class="operations-metric-card">
+                <span>Gross Revenue</span>
+                <strong>${{ metrics.gross_revenue|floatformat:2 }}</strong>
+                <small>Booked revenue across active fulfillment states</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Paid Online Revenue</span>
+                <strong>${{ metrics.paid_online_revenue|floatformat:2 }}</strong>
+                <small>Stripe-confirmed payments</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Average Order Value</span>
+                <strong>${{ metrics.average_order_value|floatformat:2 }}</strong>
+                <small>Current order mix</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Open Orders</span>
+                <strong>{{ metrics.open_orders }}</strong>
+                <small>{{ metrics.pending_payment_orders }} pending payment</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Open Returns</span>
+                <strong>{{ metrics.open_returns }}</strong>
+                <small>Requests still awaiting closure</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Open Support</span>
+                <strong>{{ metrics.open_support_threads }}</strong>
+                <small>Threads awaiting action</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Customers</span>
+                <strong>{{ metrics.customers_with_orders }}</strong>
+                <small>{{ metrics.registered_users }} registered accounts</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Verified Profiles</span>
+                <strong>{{ metrics.verified_profiles }}</strong>
+                <small>Accounts with verified email</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Active Warehouses</span>
+                <strong>{{ metrics.warehouse_count }}</strong>
+                <small>Fulfillment network nodes online</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Available Inventory</span>
+                <strong>{{ metrics.network_available }}</strong>
+                <small>{{ metrics.network_reserved }} units reserved</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Network On Hand</span>
+                <strong>{{ metrics.network_on_hand }}</strong>
+                <small>Total units across stock levels</small>
+            </article>
+            <article class="operations-metric-card">
+                <span>Live Reservations</span>
+                <strong>{{ metrics.active_reservations }}</strong>
+                <small>Orders currently holding stock</small>
+            </article>
+        </div>
+
+        <div class="operations-grid">
+            <section class="dashboard-panel">
+                <h3>7-Day Revenue Trend</h3>
+                <div class="operations-timeline">
+                    {% for row in revenue_timeline %}
+                        <div class="operations-timeline-row">
+                            <span>{{ row.label }}</span>
+                            <div class="operations-bar-shell">
+                                <div class="operations-bar" style="width: {{ row.percent }}%;"></div>
+                            </div>
+                            <strong>${{ row.total|floatformat:2 }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Payment Mix</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Orders</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in payment_mix %}
+                            <tr>
+                                <td>{{ row.label }}</td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2">No payment data yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Top Products</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Sold</th>
+                            <th>Views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in top_products %}
+                            <tr>
+                                <td>{{ item.title }}</td>
+                                <td>{{ item.sold_units }}</td>
+                                <td>{{ item.view_count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Inventory Risk</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Stock</th>
+                            <th>Reorder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in low_stock_items %}
+                            <tr>
+                                <td>{{ item.title }}</td>
+                                <td>{{ item.stock }}</td>
+                                <td>{{ item.reorder_level }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3">No low-stock items.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <h3>Category Performance</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Items</th>
+                            <th>Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in category_performance %}
+                            <tr>
+                                <td>{{ category.name }}</td>
+                                <td>{{ category.item_count }}</td>
+                                <td>{{ category.sold_units }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Recent Orders</h3>
+                <table class="operations-table">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.reference }}</td>
+                                <td>{{ order.get_status_display }}</td>
+                                <td>${{ order.total|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </div>
+{% endblock %}

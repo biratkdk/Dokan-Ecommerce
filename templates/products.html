@@ -54,7 +54,7 @@
                 {% for item in items %}
                     <div class="col-4">
                         <a href="{{ item.get_absolute_url }}">
-                            <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                            <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                         </a>
                         <span class="product-badge">{{ item.brand_name }}</span>
                         <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
@@ -126,3 +126,4 @@
         {% endif %}
     </div>
 {% endblock %}
+

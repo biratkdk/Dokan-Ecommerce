@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .intelligence import SupportSuggestion, suggest_support_answers
 from .models import SupportMessage, SupportThread
+from .permissions import can_manage_support_threads
 
 
 def _serialize_suggestions(suggestions: list[SupportSuggestion]) -> list[dict]:
@@ -21,7 +22,7 @@ def _serialize_suggestions(suggestions: list[SupportSuggestion]) -> list[dict]:
 
 def support_queryset_for_user(user):
     queryset = SupportThread.objects.select_related("user", "order").prefetch_related("messages__author")
-    if user.is_staff:
+    if can_manage_support_threads(user):
         return queryset
     return queryset.filter(user=user)
 
@@ -73,12 +74,12 @@ def post_support_message(thread: SupportThread, author, *, message: str) -> Supp
     if not body:
         raise ValidationError("Message cannot be blank.")
 
-    if not author.is_staff and thread.user_id != author.pk:
+    if not can_manage_support_threads(author) and thread.user_id != author.pk:
         raise ValidationError("You do not have access to this support conversation.")
 
     sender_role = (
         SupportMessage.SenderRole.SUPPORT
-        if author.is_staff
+        if can_manage_support_threads(author)
         else SupportMessage.SenderRole.CUSTOMER
     )
     support_message = SupportMessage.objects.create(

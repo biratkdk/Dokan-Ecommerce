@@ -77,9 +77,31 @@ class Brand(TimestampedModel):
         super().save(*args, **kwargs)
 
 
+class Warehouse(TimestampedModel):
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=120)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100)
+    priority = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["priority", "name"]
+        permissions = [
+            ("manage_inventory_network", "Can manage warehouses and stock network"),
+            ("view_inventory_dashboard", "Can view inventory dashboard"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
 class ItemQuerySet(models.QuerySet):
     def base(self) -> "ItemQuerySet":
-        return self.select_related("catalog_category", "brand")
+        return self.select_related("catalog_category", "brand").prefetch_related(
+            "product_images"
+        )
 
     def active(self) -> "ItemQuerySet":
         return self.base().filter(is_active=True)
@@ -159,6 +181,10 @@ class Item(TimestampedModel):
     description = models.TextField()
     image_url = models.CharField(max_length=255, blank=True)
     image_gallery = models.JSONField(default=list, blank=True)
+    primary_image_file = models.ImageField(
+        upload_to="products/primary/%Y/%m",
+        blank=True,
+    )
     attributes = models.JSONField(default=dict, blank=True)
     tags = models.JSONField(default=list, blank=True)
     stock = models.PositiveIntegerField(default=10)
@@ -198,14 +224,43 @@ class Item(TimestampedModel):
     def has_discount(self) -> bool:
         return bool(self.discount_price and self.discount_price < self.price)
 
+    @staticmethod
+    def _resolve_asset_url(asset: str | None) -> str:
+        if not asset:
+            return ""
+        normalized = str(asset).strip()
+        if not normalized:
+            return ""
+        if normalized.startswith(("http://", "https://", "/")):
+            return normalized
+        return f"{settings.STATIC_URL.rstrip('/')}/{normalized.lstrip('/')}"
+
     @property
     def primary_image(self) -> str:
-        return self.image_url or "images/product-1.jpg"
+        if self.primary_image_file:
+            return self.primary_image_file.url
+        primary_upload = next(
+            (image for image in self.product_images.all() if image.is_primary),
+            None,
+        )
+        if primary_upload:
+            return primary_upload.image.url
+        first_upload = next(iter(self.product_images.all()), None)
+        if first_upload:
+            return first_upload.image.url
+        return self._resolve_asset_url(self.image_url or "images/product-1.jpg")
 
     @property
     def gallery_images(self) -> list[str]:
         images = [self.primary_image]
-        images.extend(image for image in self.image_gallery if image and image != self.primary_image)
+        for uploaded_image in self.product_images.all():
+            image_url = uploaded_image.image.url
+            if image_url and image_url not in images:
+                images.append(image_url)
+        for image in self.image_gallery:
+            resolved_image = self._resolve_asset_url(image)
+            if resolved_image and resolved_image not in images:
+                images.append(resolved_image)
         return images
 
     @property
@@ -247,6 +302,15 @@ class Item(TimestampedModel):
             return int(annotated)
         aggregate = self.order_items.filter(ordered=True).aggregate(total=Sum("quantity"))
         return int(aggregate["total"] or 0)
+
+    @property
+    def reserved_units(self) -> int:
+        aggregate = self.stock_levels.aggregate(total=Sum("reserved"))
+        return int(aggregate["total"] or 0)
+
+    @property
+    def warehouse_count(self) -> int:
+        return self.stock_levels.filter(warehouse__is_active=True).count()
 
     @property
     def inventory_status(self) -> str:
@@ -481,6 +545,9 @@ class Order(TimestampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+        permissions = [
+            ("view_operations_dashboard", "Can view store operations dashboard"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.reference or 'draft'} - {self.user}"
@@ -537,6 +604,171 @@ class Order(TimestampedModel):
     @property
     def is_paid(self) -> bool:
         return self.payment_status == self.PaymentStatus.PAID
+
+
+class StockLevel(TimestampedModel):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name="stock_levels",
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="stock_levels",
+    )
+    on_hand = models.PositiveIntegerField(default=0)
+    reserved = models.PositiveIntegerField(default=0)
+    safety_stock = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["warehouse__priority", "warehouse__name", "item__title"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["warehouse", "item"],
+                name="unique_stock_level_per_warehouse_item",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.item.title} @ {self.warehouse.code}"
+
+    @property
+    def available_quantity(self) -> int:
+        return max(self.on_hand - self.reserved, 0)
+
+
+class InventoryReservation(TimestampedModel):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        FULFILLED = "fulfilled", "Fulfilled"
+        RELEASED = "released", "Released"
+        EXPIRED = "expired", "Expired"
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="inventory_reservations",
+    )
+    order_item = models.ForeignKey(
+        OrderItem,
+        on_delete=models.CASCADE,
+        related_name="inventory_reservations",
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="inventory_reservations",
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="inventory_reservations",
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+    expires_at = models.DateTimeField(blank=True, null=True)
+    released_at = models.DateTimeField(blank=True, null=True)
+    release_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        permissions = [
+            ("manage_stock_reservations", "Can manage inventory reservations"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.order.reference} - {self.item.title} ({self.quantity})"
+
+    @property
+    def is_active(self) -> bool:
+        return self.status == self.Status.ACTIVE
+
+
+class StockMovement(TimestampedModel):
+    class MovementType(models.TextChoices):
+        ADJUSTMENT_IN = "adjustment_in", "Adjustment in"
+        ADJUSTMENT_OUT = "adjustment_out", "Adjustment out"
+        TRANSFER_OUT = "transfer_out", "Transfer out"
+        TRANSFER_IN = "transfer_in", "Transfer in"
+        RESERVATION_HOLD = "reservation_hold", "Reservation hold"
+        RESERVATION_RELEASE = "reservation_release", "Reservation release"
+        FULFILLMENT = "fulfillment", "Fulfillment"
+        RETURN_RESTOCK = "return_restock", "Return restock"
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="stock_movements",
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="stock_movements",
+    )
+    related_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="related_stock_movements",
+        blank=True,
+        null=True,
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        related_name="stock_movements",
+        blank=True,
+        null=True,
+    )
+    reservation = models.ForeignKey(
+        InventoryReservation,
+        on_delete=models.SET_NULL,
+        related_name="stock_movements",
+        blank=True,
+        null=True,
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="stock_movements",
+        blank=True,
+        null=True,
+    )
+    movement_type = models.CharField(max_length=30, choices=MovementType.choices)
+    quantity = models.PositiveIntegerField(default=1)
+    on_hand_delta = models.IntegerField(default=0)
+    reserved_delta = models.IntegerField(default=0)
+    reference = models.CharField(max_length=80, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"{self.item.title} {self.get_movement_type_display()} ({self.quantity})"
+
+
+class ProductImage(TimestampedModel):
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="product_images",
+    )
+    image = models.ImageField(upload_to="products/gallery/%Y/%m")
+    alt_text = models.CharField(max_length=160, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_primary = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["sort_order", "pk"]
+
+    def __str__(self) -> str:
+        return f"{self.item.title} image {self.pk}"
 
 
 class ProductReviewQuerySet(models.QuerySet):
@@ -681,6 +913,9 @@ class CustomerProfile(TimestampedModel):
     )
     email_verified = models.BooleanField(default=False)
     email_verified_at = models.DateTimeField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    company_name = models.CharField(max_length=120, blank=True)
+    job_title = models.CharField(max_length=120, blank=True)
     marketing_opt_in = models.BooleanField(default=True)
     preferred_contact_channel = models.CharField(
         max_length=10,
@@ -691,6 +926,9 @@ class CustomerProfile(TimestampedModel):
 
     class Meta:
         ordering = ["user__username"]
+        permissions = [
+            ("manage_customer_accounts", "Can manage customer accounts"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user} profile"
@@ -777,6 +1015,9 @@ class SupportThread(TimestampedModel):
 
     class Meta:
         ordering = ["-updated_at", "-created_at"]
+        permissions = [
+            ("manage_support_threads", "Can manage all support threads"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.subject} ({self.get_status_display()})"
@@ -856,6 +1097,10 @@ class EmailNotification(TimestampedModel):
         choices=DeliveryState.choices,
         default=DeliveryState.PENDING,
     )
+    text_body = models.TextField(blank=True)
+    html_body = models.TextField(blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
+    last_attempt_at = models.DateTimeField(blank=True, null=True)
     error_message = models.CharField(max_length=255, blank=True)
     payload = models.JSONField(default=dict, blank=True)
     sent_at = models.DateTimeField(blank=True, null=True)

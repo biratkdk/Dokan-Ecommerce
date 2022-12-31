@@ -33,7 +33,7 @@
                 {% for recommendation in personalized_recommendations %}
                     <div class="col-4">
                         <a href="{{ recommendation.item.get_absolute_url }}">
-                            <img src="{% static recommendation.item.primary_image %}" alt="{{ recommendation.item.title }}">
+                            <img src="{{ recommendation.item.primary_image }}" alt="{{ recommendation.item.title }}">
                         </a>
                         <a href="{{ recommendation.item.get_absolute_url }}"><h4>{{ recommendation.item.title }}</h4></a>
                         <p>{{ recommendation.score }} score</p>
@@ -50,7 +50,7 @@
             {% for item in trending_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>{{ item.sold_units }} sold • {{ item.wishlist_count }} wishlists</p>
@@ -65,7 +65,7 @@
             {% for item in top_rated_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>{{ item.average_rating }}/5 • {{ item.review_count }} reviews</p>
@@ -80,7 +80,7 @@
             {% for item in low_stock_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>{{ item.stock }} left • Reorder at {{ item.reorder_level }}</p>
@@ -99,7 +99,7 @@
             {% for item in value_picks %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>Now ${{ item.unit_price|floatformat:2 }}{% if item.has_discount %} from ${{ item.price|floatformat:2 }}{% endif %}</p>
@@ -108,3 +108,4 @@
         </div>
     </div>
 {% endblock %}
+

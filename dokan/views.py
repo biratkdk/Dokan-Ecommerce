@@ -4,15 +4,16 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
 from django.core import signing
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
 from django.db.models import Q
 from django.db.models.functions import Coalesce
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -21,14 +22,22 @@ from django.views.generic import DetailView, FormView, ListView, TemplateView, V
 
 from .accounts import (
     ensure_customer_profile,
+    mark_email_unverified,
     mark_email_verified,
     record_login_activity,
     resolve_email_verification_token,
 )
+from .admin_dashboard import build_admin_dashboard, build_inventory_dashboard
 from .forms import (
     AddToCartForm,
+    AccountIdentityForm,
+    AccountPasswordChangeForm,
+    AddressBookForm,
     ApplyCouponForm,
     CheckoutForm,
+    CustomerProfileSettingsForm,
+    InventoryAdjustmentForm,
+    InventoryTransferForm,
     LoginForm,
     ReturnRequestForm,
     ReviewForm,
@@ -60,6 +69,13 @@ from .payments import (
     retrieve_stripe_checkout_session,
     stripe_object_to_payload,
 )
+from .permissions import (
+    can_manage_inventory_network,
+    can_manage_support_threads,
+    can_view_inventory_dashboard,
+    can_view_operations_dashboard,
+    user_role_labels,
+)
 from .session_features import (
     get_compare_items,
     get_recently_viewed_items,
@@ -68,6 +84,7 @@ from .session_features import (
     toggle_compare_item,
 )
 from .services import (
+    adjust_stock_level,
     add_item_to_cart,
     apply_coupon_to_order,
     attach_payment_session,
@@ -81,12 +98,61 @@ from .services import (
     reopen_order_for_checkout,
     submit_return_request,
     submit_review,
+    transfer_stock,
     toggle_wishlist,
 )
 from .support import create_support_thread, post_support_message, resolve_support_thread, support_queryset_for_user
 
 
 User = get_user_model()
+
+
+def build_account_settings_context(
+    request: HttpRequest,
+    *,
+    user_form=None,
+    profile_form=None,
+    password_form=None,
+    address_form=None,
+    editing_address: Address | None = None,
+) -> dict:
+    profile = ensure_customer_profile(request.user)
+    if editing_address is None:
+        edit_id = request.GET.get("edit", "").strip()
+        if edit_id:
+            editing_address = get_object_or_404(
+                Address.objects.filter(user=request.user),
+                pk=edit_id,
+            )
+
+    return {
+        "profile": profile,
+        "user_form": user_form or AccountIdentityForm(instance=request.user, prefix="user"),
+        "profile_form": profile_form
+        or CustomerProfileSettingsForm(instance=profile, prefix="profile"),
+        "password_form": password_form or AccountPasswordChangeForm(request.user),
+        "address_form": address_form
+        or AddressBookForm(instance=editing_address, prefix="address"),
+        "editing_address": editing_address,
+        "addresses": request.user.addresses.all(),
+        "recent_logins": request.user.login_activities.all()[:6],
+        "internal_roles": user_role_labels(request.user),
+        "can_view_inventory_dashboard": can_view_inventory_dashboard(request.user),
+        "can_manage_inventory_network": can_manage_inventory_network(request.user),
+    }
+
+
+def build_inventory_dashboard_context(
+    *,
+    adjustment_form=None,
+    transfer_form=None,
+) -> dict:
+    return {
+        **build_inventory_dashboard(limit=10),
+        "adjustment_form": adjustment_form
+        or InventoryAdjustmentForm(prefix="adjustment"),
+        "transfer_form": transfer_form or InventoryTransferForm(prefix="transfer"),
+    }
 
 
 class HomeView(TemplateView):
@@ -338,6 +404,268 @@ class AccountDashboardView(LoginRequiredMixin, TemplateView):
             }
         )
         return context
+
+
+class AccountSettingsView(LoginRequiredMixin, TemplateView):
+    template_name = "account_settings.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            build_account_settings_context(
+                self.request,
+                user_form=kwargs.get("user_form"),
+                profile_form=kwargs.get("profile_form"),
+                password_form=kwargs.get("password_form"),
+                address_form=kwargs.get("address_form"),
+                editing_address=kwargs.get("editing_address"),
+            )
+        )
+        return context
+
+
+class AccountProfileUpdateView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        profile = ensure_customer_profile(request.user)
+        current_email = request.user.email
+        user_form = AccountIdentityForm(
+            request.POST,
+            instance=request.user,
+            prefix="user",
+        )
+        profile_form = CustomerProfileSettingsForm(
+            request.POST,
+            instance=profile,
+            prefix="profile",
+        )
+
+        if user_form.is_valid() and profile_form.is_valid():
+            updated_user = user_form.save()
+            profile_form.save()
+            if current_email.strip().lower() != updated_user.email.strip().lower():
+                mark_email_unverified(updated_user)
+                send_email_verification_email(updated_user, request=request)
+                messages.info(
+                    request,
+                    "Email changed successfully. A new verification link has been queued for delivery.",
+                )
+            else:
+                messages.success(request, "Account settings updated successfully.")
+            return redirect("store:account-settings")
+
+        return render(
+            request,
+            "account_settings.html",
+            build_account_settings_context(
+                request,
+                user_form=user_form,
+                profile_form=profile_form,
+            ),
+            status=400,
+        )
+
+
+class AccountPasswordChangeView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        password_form = AccountPasswordChangeForm(request.user, request.POST)
+        if password_form.is_valid():
+            updated_user = password_form.save()
+            update_session_auth_hash(request, updated_user)
+            messages.success(request, "Password updated successfully.")
+            return redirect("store:account-settings")
+
+        return render(
+            request,
+            "account_settings.html",
+            build_account_settings_context(
+                request,
+                password_form=password_form,
+            ),
+            status=400,
+        )
+
+
+class AccountAddressUpsertView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, address_id: int | None = None) -> HttpResponse:
+        editing_address = None
+        if address_id is not None:
+            editing_address = get_object_or_404(
+                Address.objects.filter(user=request.user),
+                pk=address_id,
+            )
+
+        address_form = AddressBookForm(
+            request.POST,
+            instance=editing_address,
+            prefix="address",
+        )
+        if address_form.is_valid():
+            address = address_form.save(commit=False)
+            address.user = request.user
+            if address.default:
+                request.user.addresses.filter(
+                    address_type=address.address_type,
+                    default=True,
+                ).exclude(pk=address.pk).update(default=False)
+            address.save()
+            messages.success(
+                request,
+                "Address saved successfully."
+                if editing_address
+                else "Address added successfully.",
+            )
+            return redirect("store:account-settings")
+
+        return render(
+            request,
+            "account_settings.html",
+            build_account_settings_context(
+                request,
+                address_form=address_form,
+                editing_address=editing_address,
+            ),
+            status=400,
+        )
+
+
+class AccountAddressDeleteView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, address_id: int) -> HttpResponse:
+        address = get_object_or_404(Address.objects.filter(user=request.user), pk=address_id)
+        address.delete()
+        messages.success(request, "Address removed.")
+        return redirect("store:account-settings")
+
+
+class AccountAddressDefaultView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, address_id: int) -> HttpResponse:
+        address = get_object_or_404(Address.objects.filter(user=request.user), pk=address_id)
+        request.user.addresses.filter(
+            address_type=address.address_type,
+            default=True,
+        ).exclude(pk=address.pk).update(default=False)
+        if not address.default:
+            address.default = True
+            address.save(update_fields=["default", "updated_at"])
+        messages.success(request, "Default address updated.")
+        return redirect("store:account-settings")
+
+
+class OperationsDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = "operations_dashboard.html"
+
+    def test_func(self):
+        return can_view_operations_dashboard(self.request.user)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied
+        return super().handle_no_permission()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(build_admin_dashboard(limit=8))
+        return context
+
+
+class InventoryDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = "inventory_dashboard.html"
+
+    def test_func(self):
+        return can_view_inventory_dashboard(self.request.user)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied
+        return super().handle_no_permission()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            build_inventory_dashboard_context(
+                adjustment_form=kwargs.get("adjustment_form"),
+                transfer_form=kwargs.get("transfer_form"),
+            )
+        )
+        return context
+
+
+class InventoryManagementMixin(LoginRequiredMixin, UserPassesTestMixin):
+    def test_func(self):
+        return can_manage_inventory_network(self.request.user)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied
+        return super().handle_no_permission()
+
+
+class InventoryAdjustmentView(InventoryManagementMixin, View):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        adjustment_form = InventoryAdjustmentForm(request.POST, prefix="adjustment")
+        transfer_form = InventoryTransferForm(prefix="transfer")
+        if adjustment_form.is_valid():
+            quantity = adjustment_form.cleaned_data["quantity"]
+            if adjustment_form.cleaned_data["direction"] == InventoryAdjustmentForm.DIRECTION_OUT:
+                quantity *= -1
+            try:
+                stock_level = adjust_stock_level(
+                    actor=request.user,
+                    item=adjustment_form.cleaned_data["item"],
+                    warehouse=adjustment_form.cleaned_data["warehouse"],
+                    quantity_delta=quantity,
+                    reason=adjustment_form.cleaned_data["reason"],
+                    reference=adjustment_form.cleaned_data.get("reference", ""),
+                )
+            except ValidationError as exc:
+                adjustment_form.add_error(None, str(exc))
+            else:
+                messages.success(
+                    request,
+                    f"Inventory updated for {stock_level.item.title} in {stock_level.warehouse.code}.",
+                )
+                return redirect("store:inventory-dashboard")
+
+        return render(
+            request,
+            "inventory_dashboard.html",
+            build_inventory_dashboard_context(
+                adjustment_form=adjustment_form,
+                transfer_form=transfer_form,
+            ),
+            status=400,
+        )
+
+
+class InventoryTransferView(InventoryManagementMixin, View):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        transfer_form = InventoryTransferForm(request.POST, prefix="transfer")
+        adjustment_form = InventoryAdjustmentForm(prefix="adjustment")
+        if transfer_form.is_valid():
+            try:
+                transfer_stock(
+                    actor=request.user,
+                    item=transfer_form.cleaned_data["item"],
+                    source_warehouse=transfer_form.cleaned_data["source_warehouse"],
+                    destination_warehouse=transfer_form.cleaned_data["destination_warehouse"],
+                    quantity=transfer_form.cleaned_data["quantity"],
+                    reason=transfer_form.cleaned_data["reason"],
+                    reference=transfer_form.cleaned_data.get("reference", ""),
+                )
+            except ValidationError as exc:
+                transfer_form.add_error(None, str(exc))
+            else:
+                messages.success(request, "Warehouse transfer completed successfully.")
+                return redirect("store:inventory-dashboard")
+
+        return render(
+            request,
+            "inventory_dashboard.html",
+            build_inventory_dashboard_context(
+                adjustment_form=adjustment_form,
+                transfer_form=transfer_form,
+            ),
+            status=400,
+        )
 
 
 class CheckoutView(LoginRequiredMixin, FormView):
@@ -633,7 +961,7 @@ class SignUpView(FormView):
         send_email_verification_email(user, request=self.request)
         messages.success(
             self.request,
-            "Your account is ready. A verification email has been sent to secure the profile.",
+            "Your account is ready. A verification email has been queued for delivery.",
         )
         return redirect(self.get_success_url())
 
@@ -664,7 +992,7 @@ class ResendVerificationEmailView(LoginRequiredMixin, View):
             messages.info(request, "Your email is already verified.")
         else:
             send_email_verification_email(request.user, request=request)
-            messages.success(request, "A fresh verification email has been sent.")
+            messages.success(request, "A fresh verification email has been queued for delivery.")
         return redirect(request.POST.get("next") or "store:account-dashboard")
 
 
@@ -886,7 +1214,7 @@ class SupportThreadDetailView(LoginRequiredMixin, FormView):
             return self.form_invalid(form)
 
         self.thread.refresh_from_db()
-        if self.request.user.is_staff:
+        if can_manage_support_threads(self.request.user):
             send_support_reply_email(self.thread, support_message)
         messages.success(self.request, "Message posted to the support conversation.")
         return super().form_valid(form)
@@ -1000,13 +1328,22 @@ def stripe_webhook(request: HttpRequest) -> HttpResponse:
                 return HttpResponse(status=200)
             send_payment_received_email(confirmed_order)
 
-    if event_type in {"checkout.session.async_payment_failed", "checkout.session.expired"}:
+    if event_type == "checkout.session.async_payment_failed":
         reopen_order_for_checkout(
             order,
             reason="Stripe payment failed or expired. Your cart was reopened.",
             actor="stripe-webhook",
             payment_status=Order.PaymentStatus.FAILED,
             payment_payload=session_payload,
+        )
+    if event_type == "checkout.session.expired":
+        reopen_order_for_checkout(
+            order,
+            reason="Stripe payment session expired. Your cart was reopened.",
+            actor="stripe-webhook",
+            payment_status=Order.PaymentStatus.FAILED,
+            payment_payload=session_payload,
+            reservation_status="expired",
         )
 
     return HttpResponse(status=200)

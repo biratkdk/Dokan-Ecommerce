@@ -18,7 +18,7 @@
                     <tr>
                         <td>
                             <div class="cart-info">
-                                <img src="{% static order_item.item.primary_image %}" alt="{{ order_item.item.title }}">
+                                <img src="{{ order_item.item.primary_image }}" alt="{{ order_item.item.title }}">
                                 <div>
                                     <p>{{ order_item.item.title }}</p>
                                     <small>{{ order_item.item.brand_name }} • ${{ order_item.item.unit_price|floatformat:2 }}</small>
@@ -100,7 +100,7 @@
                         {% for recommendation in recommended_entries %}
                             <div class="col-4">
                                 <a href="{{ recommendation.item.get_absolute_url }}">
-                                    <img src="{% static recommendation.item.primary_image %}" alt="{{ recommendation.item.title }}">
+                                    <img src="{{ recommendation.item.primary_image }}" alt="{{ recommendation.item.title }}">
                                 </a>
                                 <a href="{{ recommendation.item.get_absolute_url }}"><h4>{{ recommendation.item.title }}</h4></a>
                                 <p>{{ recommendation.score }} score</p>
@@ -119,3 +119,4 @@
         {% endif %}
     </div>
 {% endblock %}
+

@@ -10,15 +10,20 @@ from .models import (
     Coupon,
     CustomerProfile,
     EmailNotification,
+    InventoryReservation,
     Item,
     LoginActivity,
     Order,
     OrderItem,
     OrderStatusEvent,
+    ProductImage,
     ProductReview,
     ReturnRequest,
+    StockLevel,
+    StockMovement,
     SupportMessage,
     SupportThread,
+    Warehouse,
     WishlistItem,
 )
 
@@ -61,6 +66,26 @@ class ProductReviewInline(admin.TabularInline):
     fields = ("user", "rating", "title", "verified_purchase", "approved")
 
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 0
+    fields = ("image", "alt_text", "sort_order", "is_primary")
+
+
+class StockLevelInline(admin.TabularInline):
+    model = StockLevel
+    extra = 0
+    fields = ("warehouse", "on_hand", "reserved", "safety_stock", "updated_at")
+    readonly_fields = ("warehouse", "on_hand", "reserved", "safety_stock", "updated_at")
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "parent", "is_active", "sort_order")
@@ -87,6 +112,8 @@ class ItemAdmin(admin.ModelAdmin):
         "price",
         "discount_price",
         "stock",
+        "reserved_units",
+        "warehouse_count",
         "featured",
         "is_trending",
         "is_active",
@@ -94,7 +121,13 @@ class ItemAdmin(admin.ModelAdmin):
     list_filter = ("catalog_category", "brand", "featured", "is_trending", "is_active")
     prepopulated_fields = {"slug": ("title",)}
     search_fields = ("title", "sku", "short_description", "description")
-    inlines = [ProductReviewInline]
+    inlines = [ProductImageInline, ProductReviewInline, StockLevelInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if obj and obj.stock_levels.exists():
+            readonly_fields.append("stock")
+        return readonly_fields
 
 
 @admin.register(OrderItem)
@@ -116,6 +149,14 @@ class ReturnRequestInline(admin.TabularInline):
     extra = 0
     fields = ("order_item", "quantity", "reason", "status", "created_at")
     readonly_fields = ("created_at",)
+
+
+class InventoryReservationInline(admin.TabularInline):
+    model = InventoryReservation
+    extra = 0
+    fields = ("order_item", "item", "warehouse", "quantity", "status", "expires_at", "released_at")
+    readonly_fields = fields
+    can_delete = False
 
 
 class SupportMessageInline(admin.TabularInline):
@@ -140,7 +181,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "payment_method", "payment_status", "payment_provider")
     search_fields = ("reference", "user__username", "payment_reference", "payment_session_id")
     filter_horizontal = ("items",)
-    inlines = [OrderStatusEventInline, ReturnRequestInline]
+    inlines = [OrderStatusEventInline, ReturnRequestInline, InventoryReservationInline]
     readonly_fields = ("payment_reference", "payment_session_id", "paid_at", "payment_payload")
 
 
@@ -222,3 +263,100 @@ class EmailNotificationAdmin(admin.ModelAdmin):
     list_filter = ("kind", "delivery_state")
     search_fields = ("recipient_email", "subject", "order__reference", "support_thread__subject")
     readonly_fields = ("payload", "sent_at", "created_at", "updated_at")
+
+
+@admin.register(Warehouse)
+class WarehouseAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "city", "country", "priority", "is_active")
+    list_filter = ("is_active", "country")
+    search_fields = ("code", "name", "city", "state", "country")
+
+
+@admin.register(StockLevel)
+class StockLevelAdmin(admin.ModelAdmin):
+    list_display = ("item", "warehouse", "on_hand", "reserved", "available_quantity", "safety_stock", "updated_at")
+    list_filter = ("warehouse",)
+    search_fields = ("item__title", "item__sku", "warehouse__code", "warehouse__name")
+    readonly_fields = (
+        "item",
+        "warehouse",
+        "on_hand",
+        "reserved",
+        "available_quantity",
+        "safety_stock",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display = ("item", "sort_order", "is_primary", "created_at")
+    list_filter = ("is_primary",)
+    search_fields = ("item__title", "item__sku", "alt_text")
+
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    list_display = (
+        "item",
+        "warehouse",
+        "movement_type",
+        "quantity",
+        "on_hand_delta",
+        "reserved_delta",
+        "reference",
+        "created_at",
+    )
+    list_filter = ("movement_type", "warehouse")
+    search_fields = (
+        "item__title",
+        "item__sku",
+        "warehouse__code",
+        "reference",
+        "note",
+        "order__reference",
+    )
+    readonly_fields = (
+        "item",
+        "warehouse",
+        "related_warehouse",
+        "order",
+        "reservation",
+        "actor",
+        "movement_type",
+        "quantity",
+        "on_hand_delta",
+        "reserved_delta",
+        "reference",
+        "note",
+        "metadata",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(InventoryReservation)
+class InventoryReservationAdmin(admin.ModelAdmin):
+    list_display = ("order", "item", "warehouse", "quantity", "status", "expires_at", "released_at")
+    list_filter = ("status", "warehouse")
+    search_fields = ("order__reference", "item__title", "item__sku", "warehouse__code")
+    readonly_fields = ("created_at", "updated_at")

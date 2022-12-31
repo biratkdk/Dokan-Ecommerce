@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from dokan.models import Order
+from dokan.models import InventoryReservation, Order
 from dokan.services import reopen_order_for_checkout
 
 
@@ -51,6 +51,7 @@ class Command(BaseCommand):
                 actor="cleanup-command",
                 payment_status=Order.PaymentStatus.FAILED,
                 payment_payload={"expired_cleanup_at": timezone.now().isoformat()},
+                reservation_status=InventoryReservation.Status.EXPIRED,
             )
             reopened += 1
 

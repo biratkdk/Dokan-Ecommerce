@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="row row-2">
+            <div>
+                <h2>Account Settings</h2>
+                <p>Maintain identity details, communication preferences, password security, and the address book used by checkout and order fulfillment.</p>
+            </div>
+            <a href="{% url 'store:account-dashboard' %}" class="btn compact-btn">Back to Dashboard</a>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Identity</p>
+                <h3>Profile and Communication</h3>
+                <form method="post" action="{% url 'store:account-profile-update' %}" class="auth-form">
+                    {% csrf_token %}
+                    {{ user_form.non_field_errors }}
+                    {{ profile_form.non_field_errors }}
+                    <div class="form-grid">
+                        <div class="field-group">{{ user_form.username.label_tag }}{{ user_form.username }}{{ user_form.username.errors }}</div>
+                        <div class="field-group">{{ user_form.email.label_tag }}{{ user_form.email }}{{ user_form.email.errors }}</div>
+                        <div class="field-group">{{ user_form.first_name.label_tag }}{{ user_form.first_name }}{{ user_form.first_name.errors }}</div>
+                        <div class="field-group">{{ user_form.last_name.label_tag }}{{ user_form.last_name }}{{ user_form.last_name.errors }}</div>
+                        <div class="field-group">{{ profile_form.phone_number.label_tag }}{{ profile_form.phone_number }}{{ profile_form.phone_number.errors }}</div>
+                        <div class="field-group">{{ profile_form.company_name.label_tag }}{{ profile_form.company_name }}{{ profile_form.company_name.errors }}</div>
+                        <div class="field-group">{{ profile_form.job_title.label_tag }}{{ profile_form.job_title }}{{ profile_form.job_title.errors }}</div>
+                        <div class="field-group">{{ profile_form.preferred_contact_channel.label_tag }}{{ profile_form.preferred_contact_channel }}{{ profile_form.preferred_contact_channel.errors }}</div>
+                    </div>
+                    <label class="checkbox-row">
+                        {{ profile_form.marketing_opt_in }}
+                        <span>Allow marketing and lifecycle emails</span>
+                    </label>
+                    <button type="submit" class="btn compact-btn">Save Settings</button>
+                </form>
+            </section>
+
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Security and Roles</p>
+                <h3>Verification Status</h3>
+                <p>
+                    {% if profile.email_verified %}
+                        Verified{% if profile.email_verified_at %} on {{ profile.email_verified_at|date:"M d, Y" }}{% endif %}
+                    {% else %}
+                        Not verified
+                    {% endif %}
+                </p>
+                <p>Loyalty score: {{ profile.loyalty_score }}</p>
+                {% if not profile.email_verified %}
+                    <form method="post" action="{% url 'store:resend-verification-email' %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary-chip">Resend Verification Email</button>
+                    </form>
+                {% endif %}
+
+                <div class="security-stack">
+                    <h4>Change Password</h4>
+                    <form method="post" action="{% url 'store:account-password-change' %}" class="auth-form">
+                        {% csrf_token %}
+                        {{ password_form.non_field_errors }}
+                        <div class="form-grid">
+                            <div class="field-group">{{ password_form.old_password.label_tag }}{{ password_form.old_password }}{{ password_form.old_password.errors }}</div>
+                            <div class="field-group">{{ password_form.new_password1.label_tag }}{{ password_form.new_password1 }}{{ password_form.new_password1.errors }}</div>
+                            <div class="field-group">{{ password_form.new_password2.label_tag }}{{ password_form.new_password2 }}{{ password_form.new_password2.errors }}</div>
+                        </div>
+                        <button type="submit" class="btn compact-btn">Update Password</button>
+                    </form>
+                </div>
+
+                {% if internal_roles %}
+                    <h4>Internal Roles</h4>
+                    <div class="dashboard-list">
+                        {% for role in internal_roles %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ role }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>This account currently uses standard customer access only.</p>
+                {% endif %}
+
+                {% if can_view_inventory_dashboard %}
+                    <p class="auth-footer"><a href="{% url 'store:inventory-dashboard' %}">Open inventory control</a></p>
+                {% elif can_view_operations_dashboard %}
+                    <p class="auth-footer"><a href="{% url 'store:operations-dashboard' %}">Open operations overview</a></p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Security Timeline</p>
+                <h3>Recent Logins</h3>
+                {% if recent_logins %}
+                    <div class="dashboard-list">
+                        {% for login in recent_logins %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ login.get_status_display }}</strong>
+                                <span>{{ login.created_at|date:"M d, Y H:i" }}</span>
+                                <p>IP: {{ login.ip_address|default:"unknown" }}</p>
+                                <small>{{ login.user_agent|default:"User agent unavailable" }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No recent login activity has been recorded yet.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="dashboard-layout">
+            <section class="dashboard-panel">
+                <p class="segment-eyebrow">Address Book</p>
+                <h3>{% if editing_address %}Edit Address{% else %}Add Address{% endif %}</h3>
+                <form method="post" action="{% if editing_address %}{% url 'store:account-address-edit' editing_address.id %}{% else %}{% url 'store:account-address-add' %}{% endif %}" class="auth-form">
+                    {% csrf_token %}
+                    {{ address_form.non_field_errors }}
+                    <div class="form-grid">
+                        <div class="field-group">{{ address_form.full_name.label_tag }}{{ address_form.full_name }}{{ address_form.full_name.errors }}</div>
+                        <div class="field-group">{{ address_form.phone_number.label_tag }}{{ address_form.phone_number }}{{ address_form.phone_number.errors }}</div>
+                        <div class="field-group">{{ address_form.street_address.label_tag }}{{ address_form.street_address }}{{ address_form.street_address.errors }}</div>
+                        <div class="field-group">{{ address_form.apartment_address.label_tag }}{{ address_form.apartment_address }}{{ address_form.apartment_address.errors }}</div>
+                        <div class="field-group">{{ address_form.city.label_tag }}{{ address_form.city }}{{ address_form.city.errors }}</div>
+                        <div class="field-group">{{ address_form.state.label_tag }}{{ address_form.state }}{{ address_form.state.errors }}</div>
+                        <div class="field-group">{{ address_form.country.label_tag }}{{ address_form.country }}{{ address_form.country.errors }}</div>
+                        <div class="field-group">{{ address_form.postal_code.label_tag }}{{ address_form.postal_code }}{{ address_form.postal_code.errors }}</div>
+                        <div class="field-group">{{ address_form.address_type.label_tag }}{{ address_form.address_type }}{{ address_form.address_type.errors }}</div>
+                    </div>
+                    <label class="checkbox-row">
+                        {{ address_form.default }}
+                        <span>Mark this as the default for its address type</span>
+                    </label>
+                    <div class="card-actions">
+                        <button type="submit" class="btn compact-btn">{% if editing_address %}Update Address{% else %}Save Address{% endif %}</button>
+                        {% if editing_address %}
+                            <a href="{% url 'store:account-settings' %}" class="secondary-chip">Cancel Edit</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </section>
+
+            <section class="dashboard-panel">
+                <h3>Saved Addresses</h3>
+                {% if addresses %}
+                    <div class="dashboard-list">
+                        {% for address in addresses %}
+                            <div class="dashboard-list-card">
+                                <strong>{{ address.full_name }}</strong>
+                                <span>{{ address.get_address_type_display }}{% if address.default %} | Default{% endif %}</span>
+                                <p>{{ address.street_address }}, {{ address.city }}, {{ address.country }}</p>
+                                <small>{{ address.phone_number }}</small>
+                                <div class="card-actions">
+                                    <a href="{% url 'store:account-settings' %}?edit={{ address.id }}" class="secondary-chip">Edit</a>
+                                    <form method="post" action="{% url 'store:account-address-default' address.id %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="secondary-chip">Set Default</button>
+                                    </form>
+                                    <form method="post" action="{% url 'store:account-address-delete' address.id %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="secondary-chip">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No saved addresses yet.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+{% endblock %}

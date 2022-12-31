@@ -7,11 +7,11 @@
     <div class="small-container single-product">
         <div class="row">
             <div class="col-2">
-                <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                 <div class="small-img-row">
                     {% for image in item.gallery_images|slice:":4" %}
                         <div class="small-img-col">
-                            <img src="{% static image %}" alt="{{ item.title }}">
+                            <img src="{{ image }}" alt="{{ item.title }}">
                         </div>
                     {% endfor %}
                 </div>
@@ -75,7 +75,7 @@
             {% for recommendation in recommendations %}
                 <div class="col-4">
                     <a href="{{ recommendation.item.get_absolute_url }}">
-                        <img src="{% static recommendation.item.primary_image %}" alt="{{ recommendation.item.title }}">
+                        <img src="{{ recommendation.item.primary_image }}" alt="{{ recommendation.item.title }}">
                     </a>
                     <a href="{{ recommendation.item.get_absolute_url }}"><h4>{{ recommendation.item.title }}</h4></a>
                     <p>{{ recommendation.score }} recommendation score</p>
@@ -138,7 +138,7 @@
                 {% for recent_item in recently_viewed_items %}
                     <div class="col-4">
                         <a href="{{ recent_item.get_absolute_url }}">
-                            <img src="{% static recent_item.primary_image %}" alt="{{ recent_item.title }}">
+                            <img src="{{ recent_item.primary_image }}" alt="{{ recent_item.title }}">
                         </a>
                         <a href="{{ recent_item.get_absolute_url }}"><h4>{{ recent_item.title }}</h4></a>
                         <p>{{ recent_item.short_description }}</p>
@@ -151,3 +151,4 @@
         </div>
     {% endif %}
 {% endblock %}
+

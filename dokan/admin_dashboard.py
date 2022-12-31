@@ -9,7 +9,18 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .intelligence import build_storefront_insights
-from .models import Category, CustomerProfile, Item, Order, ReturnRequest, SupportThread
+from .models import (
+    Category,
+    CustomerProfile,
+    InventoryReservation,
+    Item,
+    Order,
+    ReturnRequest,
+    StockLevel,
+    StockMovement,
+    SupportThread,
+    Warehouse,
+)
 
 
 User = get_user_model()
@@ -116,6 +127,14 @@ def build_admin_dashboard(*, limit: int = 6) -> dict:
     )
 
     insights = build_storefront_insights(limit=limit)
+    stock_levels = list(
+        StockLevel.objects.select_related("warehouse", "item").order_by(
+            "warehouse__priority",
+            "item__title",
+        )
+    )
+    network_on_hand = sum(stock_level.on_hand for stock_level in stock_levels)
+    network_reserved = sum(stock_level.reserved for stock_level in stock_levels)
 
     return {
         "metrics": {
@@ -149,6 +168,13 @@ def build_admin_dashboard(*, limit: int = 6) -> dict:
             "customers_with_orders": order_queryset.values("user").distinct().count(),
             "registered_users": User.objects.count(),
             "verified_profiles": CustomerProfile.objects.filter(email_verified=True).count(),
+            "warehouse_count": Warehouse.objects.filter(is_active=True).count(),
+            "network_on_hand": network_on_hand,
+            "network_reserved": network_reserved,
+            "network_available": max(network_on_hand - network_reserved, 0),
+            "active_reservations": InventoryReservation.objects.filter(
+                status=InventoryReservation.Status.ACTIVE
+            ).count(),
         },
         "payment_mix": payment_mix,
         "revenue_timeline": revenue_timeline,
@@ -158,4 +184,84 @@ def build_admin_dashboard(*, limit: int = 6) -> dict:
         "category_performance": category_performance,
         "trending_items": insights["trending_items"],
         "top_rated_items": insights["top_rated_items"],
+    }
+
+
+def build_inventory_dashboard(*, limit: int = 10) -> dict:
+    warehouses = list(
+        Warehouse.objects.order_by("priority", "name").prefetch_related(
+            "stock_levels__item"
+        )
+    )
+    stock_levels = list(
+        StockLevel.objects.select_related("warehouse", "item").order_by(
+            "warehouse__priority",
+            "item__title",
+        )
+    )
+    active_reservations = list(
+        InventoryReservation.objects.filter(
+            status=InventoryReservation.Status.ACTIVE
+        )
+        .select_related("order", "item", "warehouse")
+        .order_by("expires_at", "-created_at")
+    )
+    recent_stock_movements = list(
+        StockMovement.objects.select_related("item", "warehouse", "related_warehouse", "actor")
+        .order_by("-created_at", "-pk")[:limit]
+    )
+
+    warehouse_rows = []
+    for warehouse in warehouses:
+        warehouse_stock_levels = list(warehouse.stock_levels.all())
+        on_hand_total = sum(stock_level.on_hand for stock_level in warehouse_stock_levels)
+        reserved_total = sum(stock_level.reserved for stock_level in warehouse_stock_levels)
+        warehouse_rows.append(
+            {
+                "warehouse": warehouse,
+                "item_count": len(warehouse_stock_levels),
+                "on_hand_total": on_hand_total,
+                "reserved_total": reserved_total,
+                "available_total": max(on_hand_total - reserved_total, 0),
+            }
+        )
+
+    low_stock_levels = [
+        stock_level
+        for stock_level in stock_levels
+        if stock_level.available_quantity <= stock_level.safety_stock
+    ][:limit]
+    fulfillment_queue = list(
+        Order.objects.filter(
+            status__in=[
+                Order.Status.PAYMENT_PENDING,
+                Order.Status.PLACED,
+                Order.Status.PROCESSING,
+            ]
+        )
+        .prefetch_related("items__item", "inventory_reservations__warehouse")
+        .order_by("placed_at", "created_at")[:limit]
+    )
+
+    return {
+        "inventory_metrics": {
+            "active_warehouses": len([warehouse for warehouse in warehouses if warehouse.is_active]),
+            "stock_level_count": len(stock_levels),
+            "active_reservations": len(active_reservations),
+            "network_on_hand": sum(stock_level.on_hand for stock_level in stock_levels),
+            "network_reserved": sum(stock_level.reserved for stock_level in stock_levels),
+            "network_available": sum(stock_level.available_quantity for stock_level in stock_levels),
+            "at_risk_stock_levels": len(
+                [
+                    stock_level
+                    for stock_level in stock_levels
+                    if stock_level.available_quantity <= stock_level.safety_stock
+                ]
+            ),
+        },
+        "warehouse_rows": warehouse_rows[:limit],
+        "low_stock_levels": low_stock_levels,
+        "active_reservations": active_reservations[:limit],
+        "fulfillment_queue": fulfillment_queue,
+        "recent_stock_movements": recent_stock_movements,
     }

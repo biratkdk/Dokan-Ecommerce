@@ -29,6 +29,12 @@
                         <li><a href="{% url 'store:insights' %}">Insights</a></li>
                         {% if request.user.is_authenticated %}
                             <li><a href="{% url 'store:account-dashboard' %}">Dashboard</a></li>
+                            {% if can_view_operations_dashboard %}
+                                <li><a href="{% url 'store:operations-dashboard' %}">Operations</a></li>
+                            {% endif %}
+                            {% if can_view_inventory_dashboard %}
+                                <li><a href="{% url 'store:inventory-dashboard' %}">Inventory</a></li>
+                            {% endif %}
                             <li><a href="{% url 'store:wishlist' %}">Wishlist</a></li>
                             <li><a href="{% url 'store:support-threads' %}">Support</a></li>
                             <li><a href="{% url 'store:order-history' %}">Orders</a></li>
@@ -125,8 +131,15 @@
                     <h3>Developer</h3>
                     <ul>
                         <li><a href="{% url 'store:api-root' %}">API Root</a></li>
+                        <li><a href="{% url 'store:api-v2-root' %}">API v2</a></li>
                         <li><a href="{% url 'store:api-analytics-overview' %}">Analytics API</a></li>
                         <li><a href="{% url 'store:api-health' %}">Health Check</a></li>
+                        {% if can_view_operations_dashboard %}
+                            <li><a href="{% url 'store:operations-dashboard' %}">Operations</a></li>
+                        {% endif %}
+                        {% if can_view_inventory_dashboard %}
+                            <li><a href="{% url 'store:inventory-dashboard' %}">Inventory</a></li>
+                        {% endif %}
                         <li><a href="{% url 'admin:index' %}">Admin</a></li>
                     </ul>
                 </div>

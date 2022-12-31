@@ -42,7 +42,7 @@
             {% for item in featured_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <span class="product-badge">{{ item.brand_name }}</span>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
@@ -71,7 +71,7 @@
             {% for item in trending_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>{{ item.short_description }}</p>
@@ -96,7 +96,7 @@
                 <div class="col-2">
                     <p>Intelligence Layer</p>
                     <h1>Recommendation + Analytics Engine</h1>
-                    <small>Instead of relying on modern LLM tooling, this project uses classical Python recommendation logic, ranked search, support-answer retrieval, demand scoring, and customer segmentation that fit a strong 2022 academic or portfolio build.</small>
+                    <small>Instead of relying on modern LLM tooling, this project uses classical Python recommendation logic, ranked search, support-answer retrieval, demand scoring, and customer segmentation that fit a strong academic or portfolio build.</small>
                     <a href="{% url 'store:insights' %}" class="btn">View Insights &#8594;</a>
                 </div>
             </div>
@@ -109,7 +109,7 @@
             {% for item in top_rated_items %}
                 <div class="col-4">
                     <a href="{{ item.get_absolute_url }}">
-                        <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                     </a>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                     <p>{{ item.review_count }} verified reviews</p>
@@ -143,7 +143,7 @@
                 {% for item in recently_viewed_items %}
                     <div class="col-4">
                         <a href="{{ item.get_absolute_url }}">
-                            <img src="{% static item.primary_image %}" alt="{{ item.title }}">
+                            <img src="{{ item.primary_image }}" alt="{{ item.title }}">
                         </a>
                         <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
                         <p>{{ item.short_description }}</p>
@@ -156,3 +156,4 @@
         {% endif %}
     </div>
 {% endblock %}
+

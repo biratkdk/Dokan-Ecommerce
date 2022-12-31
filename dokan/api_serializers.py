@@ -10,7 +10,9 @@ from .intelligence import (
     estimate_days_to_stockout,
 )
 from .models import (
+    Address,
     CustomerProfile,
+    InventoryReservation,
     Item,
     LoginActivity,
     Order,
@@ -19,6 +21,9 @@ from .models import (
     ReturnRequest,
     SupportMessage,
     SupportThread,
+    StockLevel,
+    StockMovement,
+    Warehouse,
 )
 
 
@@ -39,6 +44,8 @@ def serialize_item(item: Item, *, include_details: bool = False) -> dict:
         "short_description": item.short_description,
         "primary_image": item.primary_image,
         "stock": item.stock,
+        "reserved_units": item.reserved_units,
+        "warehouse_count": item.warehouse_count,
         "inventory_status": item.inventory_status,
         "average_rating": item.average_rating,
         "review_count": item.review_count,
@@ -183,9 +190,31 @@ def serialize_customer_profile(profile: CustomerProfile | None) -> dict | None:
     return {
         "email_verified": profile.email_verified,
         "email_verified_at": profile.email_verified_at.isoformat() if profile.email_verified_at else None,
+        "phone_number": profile.phone_number,
+        "company_name": profile.company_name,
+        "job_title": profile.job_title,
         "marketing_opt_in": profile.marketing_opt_in,
         "preferred_contact_channel": profile.get_preferred_contact_channel_display(),
         "loyalty_score": profile.loyalty_score,
+    }
+
+
+def serialize_address(address: Address) -> dict:
+    return {
+        "id": address.pk,
+        "full_name": address.full_name,
+        "phone_number": address.phone_number,
+        "street_address": address.street_address,
+        "apartment_address": address.apartment_address,
+        "city": address.city,
+        "state": address.state,
+        "country": address.country,
+        "postal_code": address.postal_code,
+        "address_type": address.get_address_type_display(),
+        "address_type_code": address.address_type,
+        "default": address.default,
+        "short_display": address.short_display,
+        "updated_at": address.updated_at.isoformat(),
     }
 
 
@@ -235,4 +264,76 @@ def serialize_support_suggestion(suggestion: SupportSuggestion) -> dict:
         "title": suggestion.title,
         "answer": suggestion.answer,
         "confidence": suggestion.confidence,
+    }
+
+
+def serialize_warehouse(warehouse: Warehouse) -> dict:
+    return {
+        "id": warehouse.pk,
+        "code": warehouse.code,
+        "name": warehouse.name,
+        "city": warehouse.city,
+        "state": warehouse.state,
+        "country": warehouse.country,
+        "priority": warehouse.priority,
+        "is_active": warehouse.is_active,
+    }
+
+
+def serialize_stock_level(stock_level: StockLevel) -> dict:
+    return {
+        "warehouse": serialize_warehouse(stock_level.warehouse),
+        "item_id": stock_level.item_id,
+        "on_hand": stock_level.on_hand,
+        "reserved": stock_level.reserved,
+        "available": stock_level.available_quantity,
+        "safety_stock": stock_level.safety_stock,
+        "updated_at": stock_level.updated_at.isoformat(),
+    }
+
+
+def serialize_inventory_reservation(reservation: InventoryReservation) -> dict:
+    return {
+        "id": reservation.pk,
+        "order_reference": reservation.order.reference,
+        "order_item_id": reservation.order_item_id,
+        "item": reservation.item.title,
+        "item_slug": reservation.item.slug,
+        "warehouse": serialize_warehouse(reservation.warehouse),
+        "quantity": reservation.quantity,
+        "status": reservation.get_status_display(),
+        "status_code": reservation.status,
+        "expires_at": reservation.expires_at.isoformat() if reservation.expires_at else None,
+        "released_at": reservation.released_at.isoformat() if reservation.released_at else None,
+        "release_reason": reservation.release_reason,
+        "created_at": reservation.created_at.isoformat(),
+    }
+
+
+def serialize_stock_movement(movement: StockMovement) -> dict:
+    return {
+        "id": movement.pk,
+        "item": {
+            "id": movement.item_id,
+            "title": movement.item.title,
+            "sku": movement.item.sku,
+        },
+        "warehouse": serialize_warehouse(movement.warehouse),
+        "related_warehouse": (
+            serialize_warehouse(movement.related_warehouse)
+            if movement.related_warehouse
+            else None
+        ),
+        "movement_type": movement.get_movement_type_display(),
+        "movement_type_code": movement.movement_type,
+        "quantity": movement.quantity,
+        "on_hand_delta": movement.on_hand_delta,
+        "reserved_delta": movement.reserved_delta,
+        "reference": movement.reference,
+        "note": movement.note,
+        "actor": movement.actor.username if movement.actor else "",
+        "order_reference": movement.order.reference if movement.order else None,
+        "reservation_id": movement.reservation_id,
+        "metadata": movement.metadata,
+        "created_at": movement.created_at.isoformat(),
     }

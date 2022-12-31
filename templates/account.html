@@ -22,6 +22,7 @@
                 </div>
                 <button type="submit" class="btn auth-submit">Login</button>
             </form>
+            <p class="auth-footer"><a href="{% url 'store:password-reset' %}">Forgot your password?</a></p>
             <p class="auth-footer">No account yet? <a href="{% url 'store:signup' %}">Create one</a></p>
         </div>
     </section>

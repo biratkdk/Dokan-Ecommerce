@@ -58,6 +58,7 @@ urlpatterns = [
     path("operations/inventory/transfers/", views.InventoryTransferView.as_view(), name="inventory-transfer"),
     path("signup/", views.SignUpView.as_view(), name="signup"),
     path("account/verify/resend/", views.ResendVerificationEmailView.as_view(), name="resend-verification-email"),
+    path("account/verify/code/", views.VerifyEmailOtpView.as_view(), name="verify-email-otp"),
     path("account/verify/<str:token>/", views.VerifyEmailView.as_view(), name="verify-email"),
     path("logout/", views.logout_view, name="logout"),
     path("products/", views.CatalogView.as_view(), name="catalog"),

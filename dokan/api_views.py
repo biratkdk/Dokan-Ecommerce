@@ -37,7 +37,6 @@ from .intelligence import (
     suggest_support_answers,
 )
 from .models import Item, Order, SupportThread
-from .notifications import send_email_verification_email
 from .ratelimit import rate_limit
 from .session_features import get_compare_items, get_recently_viewed_items
 from .services import get_active_order, toggle_wishlist

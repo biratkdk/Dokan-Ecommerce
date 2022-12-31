@@ -82,9 +82,7 @@
                         {{ form.payment_method }}
                     </div>
                     {% if stripe_enabled %}
-                        <p class="payment-note">Stripe Checkout is enabled. Card payments are redirected to Stripe's hosted checkout page and confirmed back on the server. Add `STRIPE_WEBHOOK_SECRET` as well for background webhook confirmation.</p>
-                    {% else %}
-                        <p class="payment-note">Stripe Checkout is listed for deployment use, but it is currently disabled until `STRIPE_SECRET_KEY` is configured.</p>
+                        <p class="payment-note">Stripe Checkout is enabled. Card payments are redirected to Stripe's hosted checkout page and confirmed back on the server.</p>
                     {% endif %}
 
                     <button class="btn" type="submit">Continue</button>

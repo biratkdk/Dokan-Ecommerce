@@ -1076,6 +1076,50 @@ class SecuritySupportAndAssistantTests(TestCase):
         self.assertTrue(profile.email_verified)
         self.assertIsNotNone(profile.email_verified_at)
 
+    def test_resend_sends_otp_code_and_correct_code_verifies_email(self):
+        self.client.login(username="secure-user", password="Strong-pass-12345")
+
+        resend_response = self.client.post(reverse("store:resend-verification-email"))
+        self.assertEqual(resend_response.status_code, 302)
+
+        profile = CustomerProfile.objects.get(user=self.user)
+        self.assertTrue(profile.email_verification_code)
+        code = profile.email_verification_code
+
+        verify_response = self.client.post(
+            reverse("store:verify-email-otp"), {"code": code}
+        )
+        self.assertEqual(verify_response.status_code, 302)
+
+        profile.refresh_from_db()
+        self.assertTrue(profile.email_verified)
+        self.assertEqual(profile.email_verification_code, "")
+
+    def test_incorrect_otp_code_is_rejected_and_increments_attempts(self):
+        self.client.login(username="secure-user", password="Strong-pass-12345")
+        self.client.post(reverse("store:resend-verification-email"))
+
+        response = self.client.post(reverse("store:verify-email-otp"), {"code": "000000"})
+        self.assertEqual(response.status_code, 302)
+
+        profile = CustomerProfile.objects.get(user=self.user)
+        self.assertFalse(profile.email_verified)
+        self.assertEqual(profile.email_verification_attempts, 1)
+
+    def test_otp_code_rejected_after_expiry(self):
+        self.client.login(username="secure-user", password="Strong-pass-12345")
+        self.client.post(reverse("store:resend-verification-email"))
+
+        profile = CustomerProfile.objects.get(user=self.user)
+        code = profile.email_verification_code
+        profile.email_verification_code_expires_at = timezone.now() - timezone.timedelta(minutes=1)
+        profile.save(update_fields=["email_verification_code_expires_at"])
+
+        self.client.post(reverse("store:verify-email-otp"), {"code": code})
+
+        profile.refresh_from_db()
+        self.assertFalse(profile.email_verified)
+
     def test_resend_verification_email_url_does_not_collide_with_verify_token_route(self):
         # Regression test: "account/verify/resend/" must not be swallowed by the
         # "account/verify/<token>/" pattern, which would route POSTs here to

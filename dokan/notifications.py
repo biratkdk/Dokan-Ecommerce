@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
-from .accounts import build_email_verification_token
+from .accounts import build_email_verification_token, generate_email_verification_code
 from .models import EmailNotification, Order, ReturnRequest, SupportMessage, SupportThread
 
 
@@ -267,6 +267,23 @@ def send_email_verification_email(user, *, request=None) -> EmailNotification:
         },
         user=user,
         payload={"verification_url": verification_url},
+    )
+
+
+def send_email_verification_code(user) -> EmailNotification:
+    code = generate_email_verification_code(user)
+    return _queue_template_email(
+        kind=EmailNotification.Kind.VERIFY_EMAIL,
+        recipient_email=user.email,
+        subject="Your Redstore verification code",
+        text_template="emails/verify_email_otp.txt",
+        html_template="emails/verify_email_otp.html",
+        context={
+            "user": user,
+            "code": code,
+        },
+        user=user,
+        payload={"code_sent": True},
     )
 
 

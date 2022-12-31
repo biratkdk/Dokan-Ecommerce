@@ -78,7 +78,7 @@
 
     {% if request.user.is_authenticated and not is_email_verified %}
         <div class="container verification-banner" id="verification-banner">
-            <p>Your email is not verified yet. Open your <a href="{% url 'store:account-dashboard' %}">dashboard</a> to resend the verification link.</p>
+            <p>Your email is not verified yet. Open your <a href="{% url 'store:account-dashboard' %}">dashboard</a> to get a verification code.</p>
             <button type="button" class="verification-banner-dismiss" onclick="dismissVerificationBanner()" aria-label="Dismiss">&times;</button>
         </div>
     {% endif %}

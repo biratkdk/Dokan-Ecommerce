@@ -27,6 +27,7 @@ from .accounts import (
     mark_email_verified,
     record_login_activity,
     resolve_email_verification_token,
+    verify_email_code,
 )
 from .admin_dashboard import build_admin_dashboard, build_inventory_dashboard
 from .forms import (
@@ -57,7 +58,7 @@ from .intelligence import (
 )
 from .models import Address, Brand, Category, EmailNotification, Item, Order, OrderItem, SupportThread
 from .notifications import (
-    send_email_verification_email,
+    send_email_verification_code,
     send_order_placed_email,
     send_payment_received_email,
     send_return_requested_email,
@@ -457,10 +458,10 @@ class AccountProfileUpdateView(LoginRequiredMixin, View):
             profile_form.save()
             if current_email.strip().lower() != updated_user.email.strip().lower():
                 mark_email_unverified(updated_user)
-                send_email_verification_email(updated_user, request=request)
+                send_email_verification_code(updated_user)
                 messages.info(
                     request,
-                    "Email changed successfully. A new verification link has been queued for delivery.",
+                    "Email changed successfully. A verification code has been sent to your new address.",
                 )
             else:
                 messages.success(request, "Account settings updated successfully.")
@@ -971,10 +972,10 @@ class SignUpView(FormView):
         ensure_customer_profile(user)
         auth_login(self.request, user)
         record_login_activity(user, self.request)
-        send_email_verification_email(user, request=self.request)
+        send_email_verification_code(user)
         messages.success(
             self.request,
-            "Your account is ready. A verification email has been queued for delivery.",
+            "Your account is ready. A verification code has been sent to your email.",
         )
         return redirect(self.get_success_url())
 
@@ -1004,8 +1005,24 @@ class ResendVerificationEmailView(LoginRequiredMixin, View):
         if profile.email_verified:
             messages.info(request, "Your email is already verified.")
         else:
-            send_email_verification_email(request.user, request=request)
-            messages.success(request, "A fresh verification email has been queued for delivery.")
+            send_email_verification_code(request.user)
+            messages.success(
+                request,
+                "A verification code has been sent to your email. Enter it below to verify your account.",
+            )
+        return redirect(
+            safe_redirect_target(request, request.POST.get("next"), reverse("store:account-dashboard"))
+        )
+
+
+class VerifyEmailOtpView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest) -> HttpResponse:
+        submitted_code = request.POST.get("code", "")
+        success, error_message = verify_email_code(request.user, submitted_code)
+        if success:
+            messages.success(request, "Email verification completed for your Redstore account.")
+        else:
+            messages.error(request, error_message)
         return redirect(
             safe_redirect_target(request, request.POST.get("next"), reverse("store:account-dashboard"))
         )

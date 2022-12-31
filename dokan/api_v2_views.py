@@ -35,7 +35,7 @@ from .api_v2_serializers import (
 from .forms import AccountIdentityForm, AccountPasswordChangeForm, CustomerProfileSettingsForm
 from .intelligence import rank_catalog_search
 from .models import Address, InventoryReservation, Item, Order, StockLevel, StockMovement, Warehouse
-from .notifications import send_email_verification_email
+from .notifications import send_email_verification_code
 from .permissions import (
     can_manage_inventory_network,
     can_view_inventory_dashboard,
@@ -279,7 +279,7 @@ class AccountProfileV2View(APIView):
         )
         if email_reverification_required:
             mark_email_unverified(updated_user)
-            send_email_verification_email(updated_user, request=request._request)
+            send_email_verification_code(updated_user)
 
         return Response(
             {

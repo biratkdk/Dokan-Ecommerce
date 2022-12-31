@@ -796,6 +796,35 @@ form a {
     box-shadow: var(--shadow-md);
 }
 
+.otp-request-form {
+    margin-top: 14px;
+}
+
+.otp-verify-form {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+
+.otp-verify-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+.otp-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.otp-code-field {
+    max-width: 160px;
+    font-size: 20px;
+    letter-spacing: 4px;
+    text-align: center;
+}
+
 .dashboard-list,
 .assistant-grid,
 .chat-stack {
@@ -1167,18 +1196,42 @@ form a {
     margin-top: 18px;
 }
 
-.payment-options ul {
-    list-style: none;
-    padding: 0;
+.payment-options {
     margin: 18px 0 30px;
+}
+
+.payment-options > div {
     display: grid;
     gap: 12px;
 }
 
-.payment-options li {
+.payment-options > div > div {
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    transition: border-color var(--ease), box-shadow var(--ease);
+}
+
+.payment-options > div > div:has(input:checked) {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.payment-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 14px 16px;
-    border: 1px solid #d0d5dd;
-    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--color-ink);
+}
+
+.payment-options input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
 }
 
 .payment-note {

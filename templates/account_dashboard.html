@@ -31,10 +31,29 @@
                 <p>Preferred contact: {{ profile.get_preferred_contact_channel_display }}</p>
                 <p>Marketing opt-in: {% if profile.marketing_opt_in %}Enabled{% else %}Disabled{% endif %}</p>
                 {% if not profile.email_verified %}
-                    <form method="post" action="{% url 'store:resend-verification-email' %}">
+                    <form method="post" action="{% url 'store:resend-verification-email' %}" class="otp-request-form">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{% url 'store:account-dashboard' %}">
-                        <button type="submit" class="btn compact-btn">Resend Verification Email</button>
+                        <button type="submit" class="btn compact-btn">Send Verification Code</button>
+                    </form>
+                    <form method="post" action="{% url 'store:verify-email-otp' %}" class="otp-verify-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'store:account-dashboard' %}">
+                        <label for="otp-code-input">Enter the 6-digit code from your email</label>
+                        <div class="otp-input-row">
+                            <input
+                                type="text"
+                                id="otp-code-input"
+                                name="code"
+                                inputmode="numeric"
+                                pattern="[0-9]{6}"
+                                maxlength="6"
+                                placeholder="123456"
+                                class="auth-input otp-code-field"
+                                autocomplete="one-time-code"
+                            >
+                            <button type="submit" class="btn compact-btn">Verify</button>
+                        </div>
                     </form>
                 {% endif %}
             </section>

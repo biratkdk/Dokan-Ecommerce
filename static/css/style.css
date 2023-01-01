@@ -145,6 +145,19 @@ p {
     transform: translateY(0);
 }
 
+.btn-outline {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1.5px solid var(--color-primary);
+    box-shadow: none;
+    margin: 12px 0 0;
+}
+
+.btn-outline:hover {
+    background: var(--color-primary);
+    color: #fff;
+}
+
 .btn:focus-visible,
 a:focus-visible,
 button:focus-visible {

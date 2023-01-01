@@ -22,6 +22,7 @@
                         <p>Estimated delivery: {{ order.estimated_delivery_days }} days</p>
                         {% if order.status == "payment_pending" %}
                             <p class="payment-note">This order is waiting for Stripe confirmation. It will move into processing as soon as the payment is confirmed.</p>
+                            <a href="{% url 'store:payment-cancel' order.reference %}" class="btn btn-outline">Cancel Pending Payment</a>
                         {% endif %}
                         {% if order.customer_note %}
                             <p>Note: {{ order.customer_note }}</p>

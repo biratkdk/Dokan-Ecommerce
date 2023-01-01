@@ -398,6 +398,74 @@ button:focus-visible {
     color: #767676;
 }
 
+.spotlight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
+    gap: 18px;
+}
+
+.spotlight-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    transition: transform var(--ease), box-shadow var(--ease);
+}
+
+.spotlight-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-md);
+}
+
+.spotlight-card-lead {
+    grid-column: span 2;
+    grid-row: span 2;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+    justify-content: center;
+}
+
+.spotlight-card-lead .spotlight-image img {
+    aspect-ratio: 4 / 3;
+}
+
+.spotlight-image {
+    position: relative;
+    display: block;
+}
+
+.spotlight-image img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.spotlight-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+
+@media only screen and (max-width: 900px) {
+    .spotlight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .spotlight-card-lead {
+        grid-column: span 2;
+        grid-row: span 1;
+    }
+}
+
 .brand-strip {
     border-top: 1px solid #eee;
     border-bottom: 1px solid #eee;

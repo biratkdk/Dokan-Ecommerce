@@ -101,15 +101,16 @@
             <p class="section-eyebrow">Handpicked</p>
             <h2 class="title">Featured Products</h2>
         </div>
-        <div class="row">
+        <div class="spotlight-grid">
             {% for item in featured_items %}
-                <div class="col-4">
-                    <a href="{{ item.get_absolute_url }}">
+                <div class="spotlight-card {% if forloop.first %}spotlight-card-lead{% endif %}">
+                    <a href="{{ item.get_absolute_url }}" class="spotlight-image">
                         <img src="{{ item.primary_image }}" alt="{{ item.title }}">
+                        {% if item.has_discount %}<span class="spotlight-badge">Sale</span>{% endif %}
                     </a>
                     <span class="product-badge">{{ item.brand_name }}</span>
                     <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
-                    <p>{{ item.short_description }}</p>
+                    {% if forloop.first %}<p>{{ item.short_description }}</p>{% endif %}
                     <div class="meta-line">
                         <span>{{ item.category_name }}</span>
                         <span>{{ item.average_rating }}/5</span>
@@ -140,33 +141,6 @@
             </div>
         </div>
     {% endif %}
-
-    <div class="section-band">
-        <div class="small-container">
-            <div class="section-header">
-                <p class="section-eyebrow">Right now</p>
-                <h2 class="title">Trending by Demand Score</h2>
-            </div>
-            <div class="row">
-                {% for item in trending_items %}
-                    <div class="col-4">
-                        <a href="{{ item.get_absolute_url }}">
-                            <img src="{{ item.primary_image }}" alt="{{ item.title }}">
-                        </a>
-                        <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
-                        <p>{{ item.short_description }}</p>
-                        <div class="meta-line">
-                            <span>{{ item.inventory_status }}</span>
-                            <span>{{ item.sold_units }} sold</span>
-                        </div>
-                        <div class="price-line">
-                            <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
 
     <div class="offer">
         <div class="small-container">

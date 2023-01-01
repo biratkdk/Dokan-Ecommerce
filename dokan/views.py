@@ -177,14 +177,29 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        featured_items = list(Item.objects.featured().with_metrics()[:4])
-        featured_ids = [item.pk for item in featured_items]
-        latest_items = Item.objects.active().with_metrics().exclude(pk__in=featured_ids)[:8]
+        active_catalog = Item.objects.active()
         insights = build_storefront_insights(
             user=self.request.user if self.request.user.is_authenticated else None,
-            limit=4,
+            limit=8,
         )
-        active_catalog = Item.objects.active()
+
+        # With a small catalog, showing the same handful of SKUs in every
+        # section reads as thin/repetitive. Each section below claims items
+        # from a shared pool so nothing repeats twice on one homepage load.
+        shown_ids: set[int] = set()
+
+        def _take(pool, count):
+            picked = [item for item in pool if item.pk not in shown_ids][:count]
+            shown_ids.update(item.pk for item in picked)
+            return picked
+
+        value_picks = _take(insights["value_picks"], 3)
+        featured_items = _take(list(Item.objects.featured().with_metrics()), 4)
+        if len(featured_items) < 4:
+            featured_items += _take(list(active_catalog.with_metrics()), 4 - len(featured_items))
+        top_rated_items = _take(insights["top_rated_items"], 4)
+
+        latest_items = Item.objects.active().with_metrics().exclude(pk__in=shown_ids)[:8]
         categories = (
             Category.objects.filter(is_active=True)
             .annotate(item_count=Count("items", filter=Q(items__is_active=True)))
@@ -206,9 +221,8 @@ class HomeView(TemplateView):
             {
                 "featured_items": featured_items,
                 "latest_items": latest_items,
-                "trending_items": insights["trending_items"],
-                "top_rated_items": insights["top_rated_items"],
-                "value_picks": insights["value_picks"],
+                "top_rated_items": top_rated_items,
+                "value_picks": value_picks,
                 "customer_segment": insights["customer_segment"],
                 "customer_health": insights["customer_health"],
                 "recently_viewed_items": get_recently_viewed_items(self.request, limit=4),

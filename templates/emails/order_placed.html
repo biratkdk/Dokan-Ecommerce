@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, Helvetica, Arial, sans-serif; color: #111827; background: #f8fafc; padding: 24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);">
+                    <tr>
+                        <td>
+                            <h2 style="margin: 0 0 6px; color: #111827;">Order {{ order.reference }} placed</h2>
+                            <p style="margin: 0 0 20px; line-height: 1.6; color: #475467;">
+                                Hello {{ user.username }}, thanks for your order &mdash; here's your receipt.
+                            </p>
+
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">
+                                {% for line in order_lines %}
+                                    <tr>
+                                        <td style="padding: 10px 0; border-bottom: 1px solid #eef2f6; color: #111827; font-size: 14px;">
+                                            {{ line.item.title }} &times; {{ line.quantity }}
+                                        </td>
+                                        <td style="padding: 10px 0; border-bottom: 1px solid #eef2f6; color: #111827; font-size: 14px; text-align: right;">
+                                            ${{ line.total_price|floatformat:2 }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                <tr>
+                                    <td style="padding: 12px 0 0; font-weight: 700; font-size: 15px;">Total</td>
+                                    <td style="padding: 12px 0 0; font-weight: 700; font-size: 15px; text-align: right;">${{ order.total|floatformat:2 }}</td>
+                                </tr>
+                            </table>
+
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fff1ed; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                                <tr>
+                                    <td style="padding: 16px; font-size: 13px; color: #667085;">
+                                        <strong style="color: #111827;">Payment method:</strong> {{ order.get_payment_method_display }}<br>
+                                        <strong style="color: #111827;">Estimated delivery:</strong> {{ order.estimated_delivery_days }} days<br>
+                                        <strong style="color: #111827;">Ship to:</strong> {{ order.shipping_address.full_name }}, {{ order.shipping_address.city }}, {{ order.shipping_address.country }}
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="text-align: center; margin: 0;">
+                                <a href="{{ order_history_url }}" style="display: inline-block; background: #e13f2a; color: #fff; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 999px; text-decoration: none;">
+                                    Track Your Order &#8594;
+                                </a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

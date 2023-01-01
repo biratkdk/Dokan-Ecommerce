@@ -288,14 +288,19 @@ def send_email_verification_code(user) -> EmailNotification:
 
 
 def send_order_placed_email(order: Order) -> EmailNotification:
+    site_url = getattr(settings, "SITE_URL", "").rstrip("/")
+    order_history_path = reverse("store:order-history")
     return _queue_template_email(
         kind=EmailNotification.Kind.ORDER_PLACED,
         recipient_email=order.user.email,
         subject=f"Redstore order {order.reference} placed",
         text_template="emails/order_placed.txt",
+        html_template="emails/order_placed.html",
         context={
             "order": order,
             "user": order.user,
+            "order_lines": list(order.items.select_related("item")),
+            "order_history_url": f"{site_url}{order_history_path}" if site_url else order_history_path,
         },
         user=order.user,
         order=order,

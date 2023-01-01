@@ -2,8 +2,12 @@ Hello {{ user.username }},
 
 Your Redstore order {{ order.reference }} has been placed successfully.
 
+Items:
+{% for line in order_lines %}- {{ line.item.title }} x {{ line.quantity }} - ${{ line.total_price|floatformat:2 }}
+{% endfor %}
 Order total: ${{ order.total|floatformat:2 }}
 Payment method: {{ order.get_payment_method_display }}
 Estimated delivery: {{ order.estimated_delivery_days }} days
+Ship to: {{ order.shipping_address.full_name }}, {{ order.shipping_address.city }}, {{ order.shipping_address.country }}
 
-You can track the order from your dashboard and order history.
+Track your order: {{ order_history_url }}

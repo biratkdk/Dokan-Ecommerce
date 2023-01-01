@@ -4,7 +4,7 @@
 {% block title %}Redstore | Advanced Python Ecommerce{% endblock %}
 
 {% block header_content %}
-    <div class="hero-section">
+    <div class="hero-section hero-section-photo">
     <div class="container">
         <div class="hero-shell">
             <div class="hero-copy">
@@ -27,19 +27,8 @@
                     </div>
                 </div>
             </div>
-            <div class="hero-visual" aria-hidden="true">
-                <div class="hero-visual-card hero-visual-card-1">
-                    <span class="hero-visual-label">Recommendation engine</span>
-                    <strong>TF-IDF + Collaborative Filtering</strong>
-                </div>
-                <div class="hero-visual-card hero-visual-card-2">
-                    <span class="hero-visual-label">Inventory ledger</span>
-                    <strong>Multi-warehouse, audit-ready</strong>
-                </div>
-                <div class="hero-visual-card hero-visual-card-3">
-                    <span class="hero-visual-label">Checkout</span>
-                    <strong>Stripe webhook-driven</strong>
-                </div>
+            <div class="hero-photo">
+                <img src="{% static 'images/exclusive.png' %}" alt="Featured product">
             </div>
         </div>
     </div>

@@ -60,8 +60,11 @@ def _merge_payment_payload(order: Order, payload: dict | None) -> dict:
 
 
 def _load_locked_order(order: Order) -> tuple[Order, list[OrderItem]]:
+    # `coupon` is a nullable FK, so select_related() on it produces a LEFT
+    # OUTER JOIN. Postgres refuses `FOR UPDATE` on the nullable side of an
+    # outer join, so the lock must be scoped to just the Order table itself.
     locked_order = (
-        Order.objects.select_for_update()
+        Order.objects.select_for_update(of=("self",))
         .select_related("coupon", "user")
         .get(pk=order.pk)
     )

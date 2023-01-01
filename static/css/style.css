@@ -786,6 +786,19 @@ input:hover {
     cursor: pointer;
 }
 
+.small-img-col img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-alt);
+    transition: box-shadow var(--ease);
+}
+
+.small-img-col img:hover {
+    box-shadow: var(--shadow-sm);
+}
+
 
 /*------------media querry for 600 screen size----------*/
 
@@ -1709,6 +1722,17 @@ form a {
     border-radius: 18px;
     padding: 20px;
     box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.compare-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    border-radius: 12px;
+    background: var(--color-surface-alt);
+    margin-bottom: 12px;
 }
 
 .compare-table-wrap {

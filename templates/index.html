@@ -72,6 +72,30 @@
         </div>
     {% endif %}
 
+    {% if value_picks %}
+        <div class="deal-strip">
+            <div class="small-container deal-strip-shell">
+                <div class="deal-strip-copy">
+                    <p class="deal-strip-eyebrow">Limited-time</p>
+                    <h2>Deal of the Day</h2>
+                    <p>Discounted right now, ranked by demand &mdash; grab them before stock runs out.</p>
+                </div>
+                <div class="deal-strip-items">
+                    {% for item in value_picks|slice:":3" %}
+                        <a href="{{ item.get_absolute_url }}" class="deal-card">
+                            <img src="{{ item.primary_image }}" alt="{{ item.title }}">
+                            <span class="deal-card-title">{{ item.title }}</span>
+                            <span class="deal-card-price">
+                                <strong>${{ item.unit_price|floatformat:2 }}</strong>
+                                <s>${{ item.price|floatformat:2 }}</s>
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="small-container">
         <div class="section-header">
             <p class="section-eyebrow">Handpicked</p>
@@ -106,6 +130,16 @@
         </div>
 
     </div>
+
+    {% if brands %}
+        <div class="brand-strip">
+            <div class="small-container brand-strip-row">
+                {% for brand in brands %}
+                    <a href="{% url 'store:catalog' %}?brand={{ brand.slug }}" class="brand-strip-item">{{ brand.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
 
     <div class="section-band">
         <div class="small-container">
@@ -226,5 +260,19 @@
             </div>
         </div>
     {% endif %}
+
+    <div class="newsletter-band">
+        <div class="small-container newsletter-shell">
+            <div>
+                <h2>Never miss a restock or price drop</h2>
+                <p>Create a free account to get order notifications, wishlist restock alerts, and personalized recommendations.</p>
+            </div>
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'store:wishlist' %}" class="btn">View Your Wishlist &#8594;</a>
+            {% else %}
+                <a href="{% url 'store:signup' %}" class="btn">Create Free Account &#8594;</a>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}
 

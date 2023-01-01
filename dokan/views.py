@@ -196,6 +196,12 @@ class HomeView(TemplateView):
             .select_related("item", "user")
             .order_by("-verified_purchase", "-created_at")[:3]
         )
+        brands = list(
+            Brand.objects.filter(is_active=True)
+            .annotate(item_count=Count("items", filter=Q(items__is_active=True)))
+            .filter(item_count__gt=0)
+            .order_by("name")
+        )
         context.update(
             {
                 "featured_items": featured_items,
@@ -211,6 +217,7 @@ class HomeView(TemplateView):
                 "catalog_item_count": active_catalog.count(),
                 "brand_count": Brand.objects.filter(is_featured=True).count() or Brand.objects.count(),
                 "testimonials": testimonials,
+                "brands": brands,
             }
         )
         return context

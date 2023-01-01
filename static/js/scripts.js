@@ -13,6 +13,26 @@ window.toggleMenu = function toggleMenu() {
         menuItems.style.maxHeight === "0px" ? "240px" : "0px";
 };
 
+window.toggleNavDropdown = function toggleNavDropdown(trigger) {
+    const dropdown = trigger.closest("[data-nav-dropdown]");
+    if (!dropdown) {
+        return;
+    }
+    const wasOpen = dropdown.classList.contains("is-open");
+    document.querySelectorAll("[data-nav-dropdown].is-open").forEach((el) => el.classList.remove("is-open"));
+    if (!wasOpen) {
+        dropdown.classList.add("is-open");
+    }
+};
+
+document.addEventListener("click", (event) => {
+    document.querySelectorAll("[data-nav-dropdown].is-open").forEach((dropdown) => {
+        if (!dropdown.contains(event.target)) {
+            dropdown.classList.remove("is-open");
+        }
+    });
+});
+
 window.setTimeout(() => {
     document.querySelectorAll("[data-flash]").forEach((message) => {
         message.classList.add("flash-dismiss");

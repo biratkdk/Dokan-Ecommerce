@@ -27,20 +27,11 @@
                         <li><a href="{% url 'store:catalog' %}">Products</a></li>
                         <li><a href="{% url 'store:compare' %}">Compare</a></li>
                         <li><a href="{% url 'store:insights' %}">Insights</a></li>
-                        {% if request.user.is_authenticated %}
-                            <li><a href="{% url 'store:account-dashboard' %}">Dashboard</a></li>
-                            {% if can_view_operations_dashboard %}
-                                <li><a href="{% url 'store:operations-dashboard' %}">Operations</a></li>
-                            {% endif %}
-                            {% if can_view_inventory_dashboard %}
-                                <li><a href="{% url 'store:inventory-dashboard' %}">Inventory</a></li>
-                            {% endif %}
-                            <li><a href="{% url 'store:wishlist' %}">Wishlist</a></li>
-                            <li><a href="{% url 'store:support-threads' %}">Support</a></li>
-                            <li><a href="{% url 'store:order-history' %}">Orders</a></li>
-                            <li><a href="{% url 'store:logout' %}">Logout</a></li>
-                        {% else %}
-                            <li><a href="{% url 'store:login' %}">Account</a></li>
+                        {% if can_view_operations_dashboard %}
+                            <li><a href="{% url 'store:operations-dashboard' %}">Operations</a></li>
+                        {% endif %}
+                        {% if can_view_inventory_dashboard %}
+                            <li><a href="{% url 'store:inventory-dashboard' %}">Inventory</a></li>
                         {% endif %}
                     </ul>
                 </nav>
@@ -57,9 +48,39 @@
                         <i class="fa fa-heart-o"></i>
                         <span class="wishlist-badge">{{ wishlist_items_count }}</span>
                     </a>
-                    <a href="{% url 'store:support-threads' %}" class="wishlist-link" aria-label="Support conversations">
-                        <i class="fa fa-comments-o"></i>
-                        <span class="wishlist-badge">{{ support_threads_count }}</span>
+                    <div class="nav-dropdown" data-nav-dropdown>
+                        <button type="button" class="wishlist-link nav-dropdown-trigger" aria-label="Notifications" onclick="toggleNavDropdown(this)">
+                            <i class="fa fa-bell-o"></i>
+                            {% if notifications_count %}<span class="wishlist-badge">{{ notifications_count }}</span>{% endif %}
+                        </button>
+                        <div class="nav-dropdown-panel">
+                            <p class="nav-dropdown-title">Notifications</p>
+                            {% for notification in notifications %}
+                                <a href="{{ notification.url }}" class="nav-dropdown-item">
+                                    <strong>{{ notification.title }}</strong>
+                                    {% if notification.detail %}<span>{{ notification.detail }}</span>{% endif %}
+                                </a>
+                            {% empty %}
+                                <p class="nav-dropdown-empty">You're all caught up.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="nav-dropdown" data-nav-dropdown>
+                        <button type="button" class="user-avatar-trigger" onclick="toggleNavDropdown(this)" aria-label="Account menu">
+                            {{ request.user.username|slice:":1"|upper }}
+                        </button>
+                        <div class="nav-dropdown-panel">
+                            <p class="nav-dropdown-title">{{ request.user.username }}</p>
+                            <a href="{% url 'store:account-dashboard' %}" class="nav-dropdown-item"><strong>Dashboard</strong></a>
+                            <a href="{% url 'store:account-settings' %}" class="nav-dropdown-item"><strong>Settings</strong></a>
+                            <a href="{% url 'store:order-history' %}" class="nav-dropdown-item"><strong>Orders</strong></a>
+                            <a href="{% url 'store:support-threads' %}" class="nav-dropdown-item"><strong>Support</strong> {% if support_threads_count %}<span>{{ support_threads_count }} open</span>{% endif %}</a>
+                            <a href="{% url 'store:logout' %}" class="nav-dropdown-item nav-dropdown-item-danger"><strong>Logout</strong></a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'store:login' %}" class="wishlist-link" aria-label="Account">
+                        <i class="fa fa-user-o"></i>
                     </a>
                 {% endif %}
                 <img src="{% static 'images/menu.png' %}" alt="Open menu" class="menu-icon" onclick="toggleMenu()">

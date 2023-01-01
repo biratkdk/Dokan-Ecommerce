@@ -58,7 +58,7 @@ from .intelligence import (
     recommend_items,
     suggest_support_answers,
 )
-from .models import Address, Brand, Category, EmailNotification, Item, Order, OrderItem, SupportThread
+from .models import Address, Brand, Category, EmailNotification, Item, Order, OrderItem, ProductReview, SupportThread
 from .notifications import (
     send_email_verification_code,
     send_order_placed_email,
@@ -190,6 +190,12 @@ class HomeView(TemplateView):
             .annotate(item_count=Count("items", filter=Q(items__is_active=True)))
             .order_by("sort_order", "name")[:4]
         )
+        testimonials = list(
+            ProductReview.objects.approved()
+            .filter(rating__gte=4)
+            .select_related("item", "user")
+            .order_by("-verified_purchase", "-created_at")[:3]
+        )
         context.update(
             {
                 "featured_items": featured_items,
@@ -204,6 +210,7 @@ class HomeView(TemplateView):
                 "categories": categories,
                 "catalog_item_count": active_catalog.count(),
                 "brand_count": Brand.objects.filter(is_featured=True).count() or Brand.objects.count(),
+                "testimonials": testimonials,
             }
         )
         return context

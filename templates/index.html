@@ -36,6 +36,27 @@
 {% endblock %}
 
 {% block content %}
+    <div class="trust-bar">
+        <div class="small-container trust-bar-row">
+            <div class="trust-item">
+                <i class="fa fa-lock"></i>
+                <span>Secure Stripe checkout</span>
+            </div>
+            <div class="trust-item">
+                <i class="fa fa-refresh"></i>
+                <span>Easy returns on every order</span>
+            </div>
+            <div class="trust-item">
+                <i class="fa fa-line-chart"></i>
+                <span>ML-personalized recommendations</span>
+            </div>
+            <div class="trust-item">
+                <i class="fa fa-check-circle"></i>
+                <span>Verified customer reviews</span>
+            </div>
+        </div>
+    </div>
+
     {% if categories %}
         <div class="categories">
             <div class="small-container">
@@ -52,7 +73,10 @@
     {% endif %}
 
     <div class="small-container">
-        <h2 class="title">Featured Products</h2>
+        <div class="section-header">
+            <p class="section-eyebrow">Handpicked</p>
+            <h2 class="title">Featured Products</h2>
+        </div>
         <div class="row">
             {% for item in featured_items %}
                 <div class="col-4">
@@ -81,24 +105,32 @@
             {% endfor %}
         </div>
 
-        <h2 class="title">Trending by Demand Score</h2>
-        <div class="row">
-            {% for item in trending_items %}
-                <div class="col-4">
-                    <a href="{{ item.get_absolute_url }}">
-                        <img src="{{ item.primary_image }}" alt="{{ item.title }}">
-                    </a>
-                    <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
-                    <p>{{ item.short_description }}</p>
-                    <div class="meta-line">
-                        <span>{{ item.inventory_status }}</span>
-                        <span>{{ item.sold_units }} sold</span>
+    </div>
+
+    <div class="section-band">
+        <div class="small-container">
+            <div class="section-header">
+                <p class="section-eyebrow">Right now</p>
+                <h2 class="title">Trending by Demand Score</h2>
+            </div>
+            <div class="row">
+                {% for item in trending_items %}
+                    <div class="col-4">
+                        <a href="{{ item.get_absolute_url }}">
+                            <img src="{{ item.primary_image }}" alt="{{ item.title }}">
+                        </a>
+                        <a href="{{ item.get_absolute_url }}"><h4>{{ item.title }}</h4></a>
+                        <p>{{ item.short_description }}</p>
+                        <div class="meta-line">
+                            <span>{{ item.inventory_status }}</span>
+                            <span>{{ item.sold_units }} sold</span>
+                        </div>
+                        <div class="price-line">
+                            <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
+                        </div>
                     </div>
-                    <div class="price-line">
-                        <span class="current-price">${{ item.unit_price|floatformat:2 }}</span>
-                    </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 
@@ -119,7 +151,10 @@
     </div>
 
     <div class="small-container">
-        <h2 class="title">Top Rated Products</h2>
+        <div class="section-header">
+            <p class="section-eyebrow">Customer favorites</p>
+            <h2 class="title">Top Rated Products</h2>
+        </div>
         <div class="row">
             {% for item in top_rated_items %}
                 <div class="col-4">
@@ -170,5 +205,26 @@
             </div>
         {% endif %}
     </div>
+
+    {% if testimonials %}
+        <div class="section-band">
+            <div class="small-container">
+                <div class="section-header">
+                    <p class="section-eyebrow">In their words</p>
+                    <h2 class="title">What customers say</h2>
+                </div>
+                <div class="testimonial-grid">
+                    {% for review in testimonials %}
+                        <div class="testimonial-card">
+                            <div class="testimonial-rating">{{ review.rating }}/5</div>
+                            <p class="testimonial-quote">&ldquo;{{ review.comment }}&rdquo;</p>
+                            <p class="testimonial-author">{{ review.user.username }}{% if review.verified_purchase %} &middot; Verified purchase{% endif %}</p>
+                            <p class="testimonial-product">{{ review.item.title }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
 

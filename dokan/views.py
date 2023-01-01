@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login as auth_login
@@ -107,6 +109,7 @@ from .support import create_support_thread, post_support_message, resolve_suppor
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def safe_redirect_target(request: HttpRequest, candidate: str | None, default: str) -> str:
@@ -799,6 +802,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
             form.add_error(None, str(exc))
             return self.form_invalid(form)
         except Exception:
+            logger.exception("Stripe checkout session creation failed for order %s", self.order.pk)
             if pending_order:
                 reopen_order_for_checkout(
                     pending_order,

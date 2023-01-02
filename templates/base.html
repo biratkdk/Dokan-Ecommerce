@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Redstore{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Redstore is a Django ecommerce platform with real ML-driven product recommendations, warehouse-aware inventory, and Stripe checkout.{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}Redstore | Advanced Python Ecommerce{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Structured catalog, real checkout, and a TF-IDF + collaborative-filtering recommendation engine.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/exclusive.png' %}{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">

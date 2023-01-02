@@ -68,3 +68,15 @@ if (sameBillingCheckbox && billingFields) {
     syncBillingFieldsVisibility();
     sameBillingCheckbox.addEventListener("change", syncBillingFieldsVisibility);
 }
+
+const checkoutForm = document.querySelector("[data-checkout-form]");
+
+if (checkoutForm) {
+    checkoutForm.addEventListener("submit", () => {
+        const submitBtn = checkoutForm.querySelector("button[type=submit]");
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Placing order...";
+        }
+    });
+}

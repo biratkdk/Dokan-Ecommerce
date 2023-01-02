@@ -134,7 +134,7 @@ def _session_metadata(order: Order) -> dict[str, str]:
     }
 
 
-def create_stripe_checkout_session(request, order: Order):
+def create_stripe_checkout_session(request, order: Order, *, idempotency_key: str | None = None):
     _configure_stripe()
 
     success_url = request.build_absolute_uri(reverse("store:payment-success"))
@@ -151,6 +151,7 @@ def create_stripe_checkout_session(request, order: Order):
         metadata=_session_metadata(order),
         customer_email=order.user.email or None,
         billing_address_collection="required",
+        idempotency_key=idempotency_key,
     )
     return session
 
@@ -158,6 +159,15 @@ def create_stripe_checkout_session(request, order: Order):
 def retrieve_stripe_checkout_session(session_id: str):
     _configure_stripe()
     return stripe.checkout.Session.retrieve(session_id)
+
+
+def refund_stripe_payment(order: Order):
+    """Issue a full refund for a Stripe-paid order. Returns None if the order
+    wasn't paid through Stripe (nothing to refund via this path)."""
+    if order.payment_provider != "stripe" or not order.payment_reference:
+        return None
+    _configure_stripe()
+    return stripe.Refund.create(payment_intent=order.payment_reference)
 
 
 def construct_stripe_event(payload: bytes, signature: str):

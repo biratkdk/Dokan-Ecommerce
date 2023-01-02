@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -11,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
 from django.core import signing
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
 from django.db.models import Count, Q
 from django.db.models.functions import Coalesce
@@ -759,6 +761,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
             {
                 "order": self.order,
                 "stripe_enabled": is_stripe_enabled(),
+                "checkout_token": uuid.uuid4().hex,
                 "default_shipping_address": self.request.user.addresses.filter(
                     address_type=Address.AddressType.SHIPPING,
                     default=True,
@@ -813,7 +816,10 @@ class CheckoutView(LoginRequiredMixin, FormView):
                     billing_address=billing_address,
                     customer_note=form.cleaned_data.get("customer_note", "").strip(),
                 )
-                session = create_stripe_checkout_session(self.request, pending_order)
+                checkout_token = self.request.POST.get("checkout_token", "") or uuid.uuid4().hex
+                session = create_stripe_checkout_session(
+                    self.request, pending_order, idempotency_key=f"checkout-{checkout_token}"
+                )
                 self.order = attach_payment_session(
                     pending_order,
                     provider="stripe",
@@ -1004,16 +1010,41 @@ class StripeCheckoutCancelView(LoginRequiredMixin, View):
         return redirect("store:order-history")
 
 
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 300
+
+
 class AccountLoginView(LoginView):
     template_name = "account.html"
     form_class = LoginForm
     redirect_authenticated_user = True
 
+    def _lockout_cache_key(self) -> str:
+        username = self.request.POST.get("username", "").strip().lower()
+        ip = self.request.META.get("REMOTE_ADDR", "unknown")
+        return f"dokan:login-lockout:{ip}:{username}"
+
+    def post(self, request, *args, **kwargs):
+        cache_key = self._lockout_cache_key()
+        if cache.get(cache_key, 0) >= LOGIN_MAX_ATTEMPTS:
+            messages.error(
+                request,
+                "Too many failed login attempts. Try again in a few minutes.",
+            )
+            return redirect("store:login")
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
+        cache.delete(self._lockout_cache_key())
         response = super().form_valid(form)
         ensure_customer_profile(self.request.user)
         record_login_activity(self.request.user, self.request)
         return response
+
+    def form_invalid(self, form):
+        cache_key = self._lockout_cache_key()
+        cache.set(cache_key, cache.get(cache_key, 0) + 1, timeout=LOGIN_LOCKOUT_SECONDS)
+        return super().form_invalid(form)
 
 
 class SignUpView(FormView):

@@ -2,6 +2,42 @@
 {% load static %}
 
 {% block title %}{{ item.title }} | Redstore{% endblock %}
+{% block meta_description %}{{ item.short_description }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ item.title }} | Redstore{% endblock %}
+{% block og_description %}{{ item.short_description }}{% endblock %}
+{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ item.primary_image }}{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ item.title|escapejs }}",
+    "sku": "{{ item.sku|escapejs }}",
+    "description": "{{ item.short_description|escapejs }}",
+    "image": "{{ request.scheme }}://{{ request.get_host }}{{ item.primary_image }}",
+    "brand": {
+        "@type": "Brand",
+        "name": "{{ item.brand_name|escapejs }}"
+    },
+    {% if item.review_count %}
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ item.average_rating }}",
+        "reviewCount": "{{ item.review_count }}"
+    },
+    {% endif %}
+    "offers": {
+        "@type": "Offer",
+        "url": "{{ request.build_absolute_uri }}",
+        "priceCurrency": "USD",
+        "price": "{{ item.unit_price }}",
+        "availability": "https://schema.org/{% if item.inventory_status == 'Out of stock' %}OutOfStock{% else %}InStock{% endif %}"
+    }
+}
+</script>
+{% endblock %}
 
 {% block content %}
     <div class="small-container single-product">

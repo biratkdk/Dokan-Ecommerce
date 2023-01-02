@@ -23,6 +23,7 @@ from .models import (
     Warehouse,
     WishlistItem,
 )
+from .payments import refund_stripe_payment
 
 
 FULFILLMENT_STATUSES = [
@@ -837,10 +838,14 @@ def cancel_placed_order(order: Order, *, actor: str) -> Order:
     _sync_item_available_stock(touched_item_ids)
 
     locked_order.status = Order.Status.CANCELLED
+    was_paid_via_stripe = (
+        locked_order.payment_status == Order.PaymentStatus.PAID
+        and locked_order.payment_provider == "stripe"
+    )
     locked_order.save(update_fields=["status", "updated_at"])
 
     note = "Order cancelled by customer."
-    if locked_order.payment_status == Order.PaymentStatus.PAID:
+    if locked_order.payment_status == Order.PaymentStatus.PAID and not was_paid_via_stripe:
         note += " Refund must be processed manually."
     record_status_event(
         locked_order,
@@ -848,7 +853,34 @@ def cancel_placed_order(order: Order, *, actor: str) -> Order:
         note=note,
         actor=actor,
     )
+
+    if was_paid_via_stripe:
+        transaction.on_commit(lambda: _refund_cancelled_order(locked_order.pk, actor=actor))
+
     return locked_order
+
+
+def _refund_cancelled_order(order_pk: int, *, actor: str) -> None:
+    order = Order.objects.get(pk=order_pk)
+    try:
+        refund_stripe_payment(order)
+    except Exception as exc:
+        record_status_event(
+            order,
+            status=Order.Status.CANCELLED,
+            note=f"Automatic Stripe refund failed: {exc}. Refund must be processed manually.",
+            actor="stripe-refund",
+        )
+        return
+
+    order.payment_status = Order.PaymentStatus.REFUNDED
+    order.save(update_fields=["payment_status", "updated_at"])
+    record_status_event(
+        order,
+        status=Order.Status.CANCELLED,
+        note=f"Refund of ${order.total} issued via Stripe.",
+        actor=actor,
+    )
 
 
 @transaction.atomic

@@ -8,8 +8,9 @@
 
         <div class="checkout-grid">
             <div class="checkout-card">
-                <form method="post" class="checkout-form">
+                <form method="post" class="checkout-form" data-checkout-form>
                     {% csrf_token %}
+                    <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
                     {% if form.non_field_errors %}
                         <div class="form-errors">{{ form.non_field_errors }}</div>
                     {% endif %}

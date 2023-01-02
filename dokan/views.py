@@ -92,6 +92,7 @@ from .services import (
     add_item_to_cart,
     apply_coupon_to_order,
     attach_payment_session,
+    cancel_placed_order,
     decrease_item_quantity,
     finalize_paid_order,
     get_active_order,
@@ -432,6 +433,18 @@ class OrderHistoryView(LoginRequiredMixin, TemplateView):
             .prefetch_related("items__item", "items__return_requests", "status_events", "return_requests__order_item__item")
         )
         return context
+
+
+class CancelOrderView(LoginRequiredMixin, View):
+    def post(self, request: HttpRequest, reference: str) -> HttpResponse:
+        order = get_object_or_404(Order.objects.filter(user=request.user), reference=reference)
+        try:
+            cancel_placed_order(order, actor=request.user.username)
+        except ValidationError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, f"Order {order.reference} has been cancelled.")
+        return redirect("store:order-history")
 
 
 class AccountDashboardView(LoginRequiredMixin, TemplateView):

@@ -78,6 +78,7 @@ urlpatterns = [
     path("wishlist/toggle/<slug:slug>/", views.ToggleWishlistView.as_view(), name="toggle-wishlist"),
     path("insights/", views.InsightsView.as_view(), name="insights"),
     path("orders/", views.OrderHistoryView.as_view(), name="order-history"),
+    path("orders/<str:reference>/cancel/", views.CancelOrderView.as_view(), name="cancel-order"),
     path("orders/<str:reference>/items/<int:order_item_id>/return/", views.ReturnRequestCreateView.as_view(), name="return-request"),
     path("support/threads/", views.SupportInboxView.as_view(), name="support-threads"),
     path("support/threads/<int:thread_id>/", views.SupportThreadDetailView.as_view(), name="support-thread-detail"),

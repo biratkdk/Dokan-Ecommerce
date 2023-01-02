@@ -61,28 +61,30 @@
                             <span>Billing address is the same as shipping</span>
                         </label>
 
-                        {% if default_billing_address %}
-                            <label class="checkbox-row checkbox-row-highlight">
-                                {{ form.use_default_billing }}
-                                <span>Use saved billing address: {{ default_billing_address.short_display }}</span>
+                        <div id="billing-fields">
+                            {% if default_billing_address %}
+                                <label class="checkbox-row checkbox-row-highlight">
+                                    {{ form.use_default_billing }}
+                                    <span>Use saved billing address: {{ default_billing_address.short_display }}</span>
+                                </label>
+                            {% endif %}
+
+                            <div class="form-grid">
+                                <div class="field-group">{{ form.billing_full_name.label_tag }}{{ form.billing_full_name }}{{ form.billing_full_name.errors }}</div>
+                                <div class="field-group">{{ form.billing_phone_number.label_tag }}{{ form.billing_phone_number }}{{ form.billing_phone_number.errors }}</div>
+                                <div class="field-group field-group-wide">{{ form.billing_street_address.label_tag }}{{ form.billing_street_address }}{{ form.billing_street_address.errors }}</div>
+                                <div class="field-group field-group-wide">{{ form.billing_apartment_address.label_tag }}{{ form.billing_apartment_address }}{{ form.billing_apartment_address.errors }}</div>
+                                <div class="field-group">{{ form.billing_city.label_tag }}{{ form.billing_city }}{{ form.billing_city.errors }}</div>
+                                <div class="field-group">{{ form.billing_state.label_tag }}{{ form.billing_state }}{{ form.billing_state.errors }}</div>
+                                <div class="field-group">{{ form.billing_country.label_tag }}{{ form.billing_country }}{{ form.billing_country.errors }}</div>
+                                <div class="field-group">{{ form.billing_postal_code.label_tag }}{{ form.billing_postal_code }}{{ form.billing_postal_code.errors }}</div>
+                            </div>
+
+                            <label class="checkbox-row">
+                                {{ form.save_billing_as_default }}
+                                <span>Save this as my default billing address</span>
                             </label>
-                        {% endif %}
-
-                        <div class="form-grid">
-                            <div class="field-group">{{ form.billing_full_name.label_tag }}{{ form.billing_full_name }}{{ form.billing_full_name.errors }}</div>
-                            <div class="field-group">{{ form.billing_phone_number.label_tag }}{{ form.billing_phone_number }}{{ form.billing_phone_number.errors }}</div>
-                            <div class="field-group field-group-wide">{{ form.billing_street_address.label_tag }}{{ form.billing_street_address }}{{ form.billing_street_address.errors }}</div>
-                            <div class="field-group field-group-wide">{{ form.billing_apartment_address.label_tag }}{{ form.billing_apartment_address }}{{ form.billing_apartment_address.errors }}</div>
-                            <div class="field-group">{{ form.billing_city.label_tag }}{{ form.billing_city }}{{ form.billing_city.errors }}</div>
-                            <div class="field-group">{{ form.billing_state.label_tag }}{{ form.billing_state }}{{ form.billing_state.errors }}</div>
-                            <div class="field-group">{{ form.billing_country.label_tag }}{{ form.billing_country }}{{ form.billing_country.errors }}</div>
-                            <div class="field-group">{{ form.billing_postal_code.label_tag }}{{ form.billing_postal_code }}{{ form.billing_postal_code.errors }}</div>
                         </div>
-
-                        <label class="checkbox-row">
-                            {{ form.save_billing_as_default }}
-                            <span>Save this as my default billing address</span>
-                        </label>
                     </div>
 
                     <div class="checkout-section">

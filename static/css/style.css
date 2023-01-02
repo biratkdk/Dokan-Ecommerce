@@ -2178,6 +2178,107 @@ form a {
     background: #f8fafc;
 }
 
+.order-status-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin: 4px 0;
+    background: var(--color-surface-alt);
+    color: #475467;
+}
+
+.order-status-placed,
+.order-status-processing { background: #fef3c7; color: #92400e; }
+.order-status-payment_pending { background: #dbeafe; color: #1d4ed8; }
+.order-status-shipped { background: #e0e7ff; color: #4338ca; }
+.order-status-delivered { background: #dcfce7; color: #166534; }
+.order-status-cancelled { background: #fee2e2; color: #b91c1c; }
+
+.order-meta-line {
+    font-size: 13px;
+    color: #767676;
+}
+
+.cancel-order-form {
+    margin: 10px 0 0;
+}
+
+.cancel-order-form .btn-outline {
+    margin: 0;
+}
+
+.order-tracking {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-border);
+}
+
+.order-tracking-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #767696;
+    margin-bottom: 14px;
+}
+
+.tracking-timeline {
+    display: flex;
+    flex-direction: column;
+}
+
+.tracking-step {
+    display: flex;
+    gap: 14px;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.tracking-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 14px;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-border);
+}
+
+.tracking-dot {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-border);
+    margin-top: 4px;
+}
+
+.tracking-step-current .tracking-dot {
+    background: var(--color-primary);
+    box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+.tracking-step-body strong {
+    display: block;
+    font-size: 14px;
+    color: var(--color-ink);
+}
+
+.tracking-timestamp {
+    font-size: 12px;
+    color: #767676;
+}
+
+.tracking-step-body p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #475467;
+}
+
 .compare-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

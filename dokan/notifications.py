@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterable
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import connection
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
@@ -247,7 +249,25 @@ def _queue_template_email(
     )
     if _should_queue_delivery():
         return notification
-    return deliver_email_notification(notification)
+    # Sync mode still hands off to a background thread instead of blocking
+    # the request on a live SMTP call: a slow or unreachable mail server
+    # would otherwise hang the response indefinitely. The thread opens its
+    # own DB connection (Django connections are thread-local) and closes it
+    # when done so it doesn't leak.
+    threading.Thread(
+        target=_deliver_in_background,
+        args=(notification.pk,),
+        daemon=True,
+    ).start()
+    return notification
+
+
+def _deliver_in_background(notification_id: int) -> None:
+    try:
+        notification = EmailNotification.objects.get(pk=notification_id)
+        deliver_email_notification(notification)
+    finally:
+        connection.close()
 
 
 def send_email_verification_email(user, *, request=None) -> EmailNotification:

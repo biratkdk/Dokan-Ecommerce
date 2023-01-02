@@ -796,6 +796,61 @@ def place_order(
     return locked_order
 
 
+CANCELLABLE_ORDER_STATUSES = [Order.Status.PLACED, Order.Status.PROCESSING]
+
+
+@transaction.atomic
+def cancel_placed_order(order: Order, *, actor: str) -> Order:
+    locked_order = Order.objects.select_for_update().get(pk=order.pk)
+    if locked_order.status not in CANCELLABLE_ORDER_STATUSES:
+        raise ValidationError("This order can no longer be cancelled.")
+
+    fulfilled_reservations = list(
+        InventoryReservation.objects.select_for_update()
+        .filter(order=locked_order, status=InventoryReservation.Status.FULFILLED)
+        .select_related("warehouse", "item")
+    )
+    touched_item_ids: set[int] = set()
+    for reservation in fulfilled_reservations:
+        stock_level = StockLevel.objects.select_for_update().get(
+            warehouse_id=reservation.warehouse_id,
+            item_id=reservation.item_id,
+        )
+        _apply_stock_level_change(
+            stock_level,
+            movement_type=StockMovement.MovementType.RETURN_RESTOCK,
+            quantity=reservation.quantity,
+            on_hand_delta=reservation.quantity,
+            order=locked_order,
+            reservation=reservation,
+            reference=locked_order.reference,
+            note=f"Order {locked_order.reference} cancelled by customer.",
+        )
+        reservation.status = InventoryReservation.Status.RELEASED
+        reservation.released_at = timezone.now()
+        reservation.release_reason = "Order cancelled by customer"
+        reservation.save(
+            update_fields=["status", "released_at", "release_reason", "updated_at"]
+        )
+        touched_item_ids.add(reservation.item_id)
+
+    _sync_item_available_stock(touched_item_ids)
+
+    locked_order.status = Order.Status.CANCELLED
+    locked_order.save(update_fields=["status", "updated_at"])
+
+    note = "Order cancelled by customer."
+    if locked_order.payment_status == Order.PaymentStatus.PAID:
+        note += " Refund must be processed manually."
+    record_status_event(
+        locked_order,
+        status=Order.Status.CANCELLED,
+        note=note,
+        actor=actor,
+    )
+    return locked_order
+
+
 @transaction.atomic
 def prepare_order_for_online_payment(
     order: Order,

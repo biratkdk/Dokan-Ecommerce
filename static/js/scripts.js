@@ -53,3 +53,18 @@ window.dismissVerificationBanner = function dismissVerificationBanner() {
     }
     sessionStorage.setItem("verificationBannerDismissed", "1");
 };
+
+const sameBillingCheckbox = document.getElementById("id_same_billing_address");
+const billingFields = document.getElementById("billing-fields");
+
+function syncBillingFieldsVisibility() {
+    if (!sameBillingCheckbox || !billingFields) {
+        return;
+    }
+    billingFields.style.display = sameBillingCheckbox.checked ? "none" : "block";
+}
+
+if (sameBillingCheckbox && billingFields) {
+    syncBillingFieldsVisibility();
+    sameBillingCheckbox.addEventListener("change", syncBillingFieldsVisibility);
+}

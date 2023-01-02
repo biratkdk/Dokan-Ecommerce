@@ -12,7 +12,8 @@
                         <div class="history-header">
                             <div>
                                 <h3>{{ order.reference }}</h3>
-                                <p>{{ order.get_status_display }} | {{ order.get_payment_method_display }} | {{ order.get_payment_status_display }}</p>
+                                <span class="order-status-badge order-status-{{ order.status }}">{{ order.get_status_display }}</span>
+                                <p class="order-meta-line">{{ order.get_payment_method_display }} &middot; {{ order.get_payment_status_display }}</p>
                             </div>
                             <strong>${{ order.total|floatformat:2 }}</strong>
                         </div>
@@ -20,13 +21,21 @@
                             <p>Payment reference: {{ order.payment_reference }}</p>
                         {% endif %}
                         <p>Estimated delivery: {{ order.estimated_delivery_days }} days</p>
+
                         {% if order.status == "payment_pending" %}
                             <p class="payment-note">This order is waiting for Stripe confirmation. It will move into processing as soon as the payment is confirmed.</p>
                             <a href="{% url 'store:payment-cancel' order.reference %}" class="btn btn-outline">Cancel Pending Payment</a>
+                        {% elif order.status == "placed" or order.status == "processing" %}
+                            <form method="post" action="{% url 'store:cancel-order' order.reference %}" class="cancel-order-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline">Cancel Order</button>
+                            </form>
                         {% endif %}
+
                         {% if order.customer_note %}
                             <p>Note: {{ order.customer_note }}</p>
                         {% endif %}
+
                         <ul class="summary-list">
                             {% for order_item in order.items.all %}
                                 <li>
@@ -44,6 +53,7 @@
                                 </li>
                             {% endfor %}
                         </ul>
+
                         {% if order.return_requests.all %}
                             <div class="return-stack">
                                 {% for return_request in order.return_requests.all %}
@@ -55,13 +65,21 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <div class="timeline">
-                            {% for event in order.status_events.all %}
-                                <div class="timeline-row">
-                                    <span>{{ event.get_status_display }}</span>
-                                    <span>{{ event.note }}</span>
-                                </div>
-                            {% endfor %}
+
+                        <div class="order-tracking">
+                            <p class="order-tracking-title">Order Tracking</p>
+                            <div class="tracking-timeline">
+                                {% for event in order.status_events.all %}
+                                    <div class="tracking-step {% if forloop.last %}tracking-step-current{% endif %}">
+                                        <span class="tracking-dot"></span>
+                                        <div class="tracking-step-body">
+                                            <strong>{{ event.get_status_display }}</strong>
+                                            <span class="tracking-timestamp">{{ event.created_at|date:"M j, Y g:i A" }}</span>
+                                            {% if event.note %}<p>{{ event.note }}</p>{% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 {% endfor %}

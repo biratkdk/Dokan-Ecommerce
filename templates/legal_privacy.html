@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | Redstore{% endblock %}
+{% block meta_description %}Redstore's Privacy Policy: what data we collect at checkout, how it's used, and how to reach us about it.{% endblock %}
+
+{% block content %}
+    <div class="small-container legal-page">
+        <h2 class="title">Privacy Policy</h2>
+        <p class="legal-updated">Last updated: January 2023</p>
+
+        <p class="legal-disclaimer">Redstore is a Django ecommerce project built as an academic capstone and portfolio piece. This policy describes what the application actually collects and does with it, in the structure of a real store's privacy policy.</p>
+
+        <h3>1. What We Collect</h3>
+        <p>Account email and username; shipping and billing addresses you enter at checkout; order and payment status (Redstore never sees or stores your card number &mdash; that's handled entirely by Stripe); support messages and product reviews you submit; basic login activity (IP address, timestamp) for account security.</p>
+
+        <h3>2. Guest Checkout</h3>
+        <p>Checking out as a guest creates a session-linked account with no password, holding only the email and address you provide for that order. If you later create a full account with the same browser session, your guest cart is carried over automatically.</p>
+
+        <h3>3. How We Use It</h3>
+        <p>To fulfill and track orders, send order and account emails (confirmation, verification codes, receipts), respond to support requests, and generate the product recommendations shown on the Insights page from your own order and browsing history &mdash; never shared across other customers' accounts.</p>
+
+        <h3>4. Email</h3>
+        <p>We send transactional email only: order confirmations, verification codes, and password resets. We don't send marketing email or share your address with third parties for marketing.</p>
+
+        <h3>5. Third Parties</h3>
+        <p>Stripe processes payments and receives what's needed to do so (amount, currency, billing details). SendGrid delivers our transactional email. Neither uses your data for anything beyond that.</p>
+
+        <h3>6. Data Retention</h3>
+        <p>Order records are kept for as long as your account exists. Guest checkout identities with no completed order are periodically cleaned up.</p>
+
+        <h3>7. Your Requests</h3>
+        <p>Contact <a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a> to ask what data we hold about you or to request deletion of your account.</p>
+    </div>
+{% endblock %}

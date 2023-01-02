@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 import uuid
 
@@ -10,6 +11,8 @@ from django.utils import timezone
 
 from .models import CustomerProfile, LoginActivity
 
+
+logger = logging.getLogger(__name__)
 
 EMAIL_VERIFICATION_SALT = "dokan.email-verification"
 EMAIL_VERIFICATION_MAX_AGE = 60 * 60 * 24 * 7
@@ -186,3 +189,42 @@ def record_login_activity(user, request) -> LoginActivity:
         ip_address=_extract_client_ip(request) or None,
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:255],
     )
+
+
+def merge_guest_cart_into_user(request, user) -> None:
+    """Fold a guest's in-progress cart into the account they just logged
+    into or created. Without this, shopping as a guest and then logging in
+    mid-session silently orphans the cart -- it still exists in the
+    database, but the customer can never see it again."""
+    from .models import Order
+    from .services import add_item_to_cart
+
+    guest_id = request.session.get(GUEST_SESSION_KEY)
+    if not guest_id or guest_id == user.pk:
+        return
+
+    User = get_user_model()
+    guest = User.objects.filter(pk=guest_id).first()
+    if not guest or guest.has_usable_password():
+        del request.session[GUEST_SESSION_KEY]
+        return
+
+    guest_order = (
+        Order.objects.filter(user=guest, status=Order.Status.CART)
+        .prefetch_related("items__item")
+        .first()
+    )
+    if guest_order:
+        for order_item in guest_order.items.all():
+            try:
+                add_item_to_cart(user, order_item.item, order_item.quantity)
+            except Exception:
+                # Best-effort merge: a stock or validation issue on one line
+                # shouldn't block login or lose the rest of the cart, but it
+                # must not vanish silently either.
+                logger.exception(
+                    "Failed to merge guest cart line %s into user %s", order_item.pk, user.pk
+                )
+        guest_order.delete()
+
+    del request.session[GUEST_SESSION_KEY]

@@ -31,6 +31,21 @@ document.addEventListener("click", (event) => {
             dropdown.classList.remove("is-open");
         }
     });
+
+    const dropdownTrigger = event.target.closest('[data-toggle="nav-dropdown"]');
+    if (dropdownTrigger) {
+        toggleNavDropdown(dropdownTrigger);
+        return;
+    }
+
+    if (event.target.closest('[data-toggle="mobile-menu"]')) {
+        toggleMenu();
+        return;
+    }
+
+    if (event.target.closest('[data-action="dismiss-verification-banner"]')) {
+        dismissVerificationBanner();
+    }
 });
 
 window.setTimeout(() => {

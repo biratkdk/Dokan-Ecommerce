@@ -845,6 +845,7 @@ class AuthenticationTests(TestCase):
                 "email": "user@example.com",
                 "password1": "Strong-pass-12345",
                 "password2": "Strong-pass-12345",
+                "agree_to_terms": "on",
             },
         )
 
@@ -1709,3 +1710,39 @@ class GuestCheckoutTests(TestCase):
             reverse("store:order-confirmation", kwargs={"reference": order.reference})
         )
         self.assertEqual(other_client_response.status_code, 404)
+
+    def test_guest_cart_merges_into_account_on_login(self):
+        user = User.objects.create_user(username="merge_target", password="strong-pass-123")
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 2},
+        )
+
+        self.client.post(
+            reverse("store:login"),
+            {"username": "merge_target", "password": "strong-pass-123"},
+        )
+
+        order = Order.objects.get(user=user, status=Order.Status.CART)
+        self.assertEqual(order.total_items, 2)
+
+    def test_guest_cart_merges_into_new_account_on_signup(self):
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1},
+        )
+
+        self.client.post(
+            reverse("store:signup"),
+            {
+                "username": "merge_signup_user",
+                "email": "merge_signup@example.com",
+                "password1": "Strong-pass-98765",
+                "password2": "Strong-pass-98765",
+                "agree_to_terms": "on",
+            },
+        )
+
+        new_user = User.objects.get(username="merge_signup_user")
+        order = Order.objects.get(user=new_user, status=Order.Status.CART)
+        self.assertEqual(order.total_items, 1)

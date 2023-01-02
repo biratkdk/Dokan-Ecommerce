@@ -625,6 +625,46 @@ button:focus-visible {
     padding-right: 25px;
 }
 
+.legal-page {
+    max-width: 720px;
+    padding-bottom: 60px;
+}
+
+.legal-updated {
+    text-align: center;
+    color: #767676;
+    font-size: 13px;
+    margin-top: -40px;
+    margin-bottom: 24px;
+}
+
+.legal-disclaimer {
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #475467;
+    margin-bottom: 32px;
+}
+
+.legal-page h3 {
+    margin-top: 28px;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.legal-page p {
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: #333;
+}
+
+.legal-contact {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
+}
+
 .col-4 {
     flex-basis: 25%;
     padding: 16px;
@@ -789,7 +829,7 @@ small {
 
 .footer-top {
     display: grid;
-    grid-template-columns: minmax(280px, 1.6fr) repeat(3, minmax(150px, 1fr));
+    grid-template-columns: minmax(280px, 1.6fr) repeat(4, minmax(130px, 1fr));
     gap: 34px;
     align-items: start;
 }

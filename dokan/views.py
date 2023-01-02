@@ -31,6 +31,7 @@ from .accounts import (
     is_guest_user,
     mark_email_unverified,
     mark_email_verified,
+    merge_guest_cart_into_user,
     peek_cart_user,
     record_login_activity,
     resolve_email_verification_token,
@@ -1091,6 +1092,7 @@ class AccountLoginView(LoginView):
         response = super().form_valid(form)
         ensure_customer_profile(self.request.user)
         record_login_activity(self.request.user, self.request)
+        merge_guest_cart_into_user(self.request, self.request.user)
         return response
 
     def form_invalid(self, form):
@@ -1109,6 +1111,7 @@ class SignUpView(FormView):
         ensure_customer_profile(user)
         auth_login(self.request, user)
         record_login_activity(user, self.request)
+        merge_guest_cart_into_user(self.request, user)
         send_email_verification_code(user)
         messages.success(
             self.request,

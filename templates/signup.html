@@ -30,6 +30,11 @@
                     {{ form.password2 }}
                     {{ form.password2.errors }}
                 </div>
+                <label class="checkbox-row">
+                    {{ form.agree_to_terms }}
+                    <span>I agree to the <a href="{% url 'store:terms' %}" target="_blank">Terms of Service</a> and <a href="{% url 'store:privacy' %}" target="_blank">Privacy Policy</a></span>
+                </label>
+                {{ form.agree_to_terms.errors }}
                 <button type="submit" class="btn auth-submit">Signup</button>
             </form>
             <p class="auth-footer">Already registered? <a href="{% url 'store:login' %}">Login</a></p>

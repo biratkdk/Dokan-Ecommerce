@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service | Redstore{% endblock %}
+{% block meta_description %}Redstore's Terms of Service: account, orders, payment, returns, and acceptable use.{% endblock %}
+
+{% block content %}
+    <div class="small-container legal-page">
+        <h2 class="title">Terms of Service</h2>
+        <p class="legal-updated">Last updated: January 2023</p>
+
+        <p class="legal-disclaimer">Redstore is a Django ecommerce project built as an academic capstone and portfolio piece. This page is written in the structure and tone of a real store's terms so the checkout, account, and order flows have a genuine policy to point to &mdash; it is not the terms of a registered business.</p>
+
+        <h3>1. Accounts</h3>
+        <p>You may browse and check out as a guest with just an email address, or create an account to save addresses and track order history. You're responsible for keeping your account credentials confidential and for activity under your account.</p>
+
+        <h3>2. Orders and Payment</h3>
+        <p>Placing an order is an offer to purchase at the listed price. We accept cash on delivery, card on delivery, bank transfer, and Stripe Checkout. Stripe payments are processed entirely by Stripe &mdash; card details never pass through or get stored on Redstore's servers.</p>
+
+        <h3>3. Pricing and Availability</h3>
+        <p>Prices and stock levels are shown in real time based on our inventory system. If an item goes out of stock between adding it to your cart and completing checkout, we'll let you know before charging you.</p>
+
+        <h3>4. Cancellations</h3>
+        <p>Orders can be cancelled from your order history while they're still placed or processing, before they ship. A Stripe-paid order that's cancelled is refunded automatically to the original payment method.</p>
+
+        <h3>5. Returns</h3>
+        <p>Delivered orders are eligible for a return request from your order history within the return window shown on the order. Approved returns are restocked and refunded per the payment method used.</p>
+
+        <h3>6. Acceptable Use</h3>
+        <p>Don't use the store to submit fraudulent orders, abuse the coupon or return system, or attempt to access another customer's account or order data.</p>
+
+        <h3>7. Changes</h3>
+        <p>We may update these terms as the store evolves. Continued use after a change means you accept the update.</p>
+
+        <p class="legal-contact">Questions? Contact <a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a>.</p>
+    </div>
+{% endblock %}

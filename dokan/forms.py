@@ -56,6 +56,10 @@ class SignUpForm(UserCreationForm):
             attrs={"class": "auth-input", "placeholder": "Email address"}
         ),
     )
+    agree_to_terms = forms.BooleanField(
+        required=True,
+        error_messages={"required": "You must accept the Terms of Service to create an account."},
+    )
 
     class Meta:
         model = User

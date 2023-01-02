@@ -56,7 +56,7 @@
                         <span class="wishlist-badge">{{ wishlist_items_count }}</span>
                     </a>
                     <div class="nav-dropdown" data-nav-dropdown>
-                        <button type="button" class="wishlist-link nav-dropdown-trigger" aria-label="Notifications" onclick="toggleNavDropdown(this)">
+                        <button type="button" class="wishlist-link nav-dropdown-trigger" aria-label="Notifications" data-toggle="nav-dropdown">
                             <i class="fa fa-bell-o"></i>
                             {% if notifications_count %}<span class="wishlist-badge">{{ notifications_count }}</span>{% endif %}
                         </button>
@@ -73,7 +73,7 @@
                         </div>
                     </div>
                     <div class="nav-dropdown" data-nav-dropdown>
-                        <button type="button" class="user-avatar-trigger" onclick="toggleNavDropdown(this)" aria-label="Account menu">
+                        <button type="button" class="user-avatar-trigger" data-toggle="nav-dropdown" aria-label="Account menu">
                             {{ request.user.username|slice:":1"|upper }}
                         </button>
                         <div class="nav-dropdown-panel">
@@ -90,7 +90,7 @@
                         <i class="fa fa-user-o"></i>
                     </a>
                 {% endif %}
-                <img src="{% static 'images/menu.png' %}" alt="Open menu" class="menu-icon" onclick="toggleMenu()">
+                <img src="{% static 'images/menu.png' %}" alt="Open menu" class="menu-icon" data-toggle="mobile-menu">
             </div>
         </div>
         {% block header_content %}{% endblock %}
@@ -107,7 +107,7 @@
     {% if request.user.is_authenticated and not is_email_verified %}
         <div class="container verification-banner" id="verification-banner">
             <p>Your email is not verified yet. Open your <a href="{% url 'store:account-dashboard' %}">dashboard</a> to get a verification code.</p>
-            <button type="button" class="verification-banner-dismiss" onclick="dismissVerificationBanner()" aria-label="Dismiss">&times;</button>
+            <button type="button" class="verification-banner-dismiss" data-action="dismiss-verification-banner" aria-label="Dismiss">&times;</button>
         </div>
     {% endif %}
 
@@ -154,6 +154,13 @@
                             <li><a href="{% url 'store:cart' %}">Cart</a></li>
                             <li><a href="{% url 'store:catalog' %}">Browse Products</a></li>
                         {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="{% url 'store:terms' %}">Terms of Service</a></li>
+                        <li><a href="{% url 'store:privacy' %}">Privacy Policy</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

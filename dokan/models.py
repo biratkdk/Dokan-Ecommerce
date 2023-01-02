@@ -14,6 +14,17 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+MAX_UPLOAD_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+
+
+def validate_image_file_size(file) -> None:
+    if file.size > MAX_UPLOAD_IMAGE_SIZE_BYTES:
+        raise ValidationError(
+            f"Image must be under {MAX_UPLOAD_IMAGE_SIZE_BYTES // (1024 * 1024)}MB "
+            f"(got {file.size / (1024 * 1024):.1f}MB)."
+        )
+
+
 class TimestampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -184,6 +195,7 @@ class Item(TimestampedModel):
     primary_image_file = models.ImageField(
         upload_to="products/primary/%Y/%m",
         blank=True,
+        validators=[validate_image_file_size],
     )
     attributes = models.JSONField(default=dict, blank=True)
     tags = models.JSONField(default=list, blank=True)
@@ -765,7 +777,7 @@ class ProductImage(TimestampedModel):
         on_delete=models.CASCADE,
         related_name="product_images",
     )
-    image = models.ImageField(upload_to="products/gallery/%Y/%m")
+    image = models.ImageField(upload_to="products/gallery/%Y/%m", validators=[validate_image_file_size])
     alt_text = models.CharField(max_length=160, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     is_primary = models.BooleanField(default=False)

@@ -1,5 +1,6 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
+from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from . import api_v2_views, api_views, views
@@ -78,6 +79,8 @@ urlpatterns = [
     path("wishlist/", views.WishlistView.as_view(), name="wishlist"),
     path("wishlist/toggle/<slug:slug>/", views.ToggleWishlistView.as_view(), name="toggle-wishlist"),
     path("insights/", views.InsightsView.as_view(), name="insights"),
+    path("terms/", TemplateView.as_view(template_name="legal_terms.html"), name="terms"),
+    path("privacy/", TemplateView.as_view(template_name="legal_privacy.html"), name="privacy"),
     path("orders/", views.OrderHistoryView.as_view(), name="order-history"),
     path("orders/<str:reference>/cancel/", views.CancelOrderView.as_view(), name="cancel-order"),
     path("orders/<str:reference>/items/<int:order_item_id>/return/", views.ReturnRequestCreateView.as_view(), name="return-request"),

@@ -170,8 +170,11 @@ class CartFlowTests(TestCase):
             self._checkout_payload(Order.PaymentMethod.CASH),
         )
 
-        self.assertRedirects(response, reverse("store:order-history"))
         order = Order.objects.get(user=self.user, status=Order.Status.PLACED)
+        self.assertRedirects(
+            response,
+            reverse("store:order-confirmation", kwargs={"reference": order.reference}),
+        )
         self.assertEqual(order.total_items, 2)
         self.assertEqual(order.payment_status, Order.PaymentStatus.PENDING)
         self.item.refresh_from_db()
@@ -196,7 +199,13 @@ class CartFlowTests(TestCase):
                 reverse("store:checkout"),
                 self._checkout_payload(Order.PaymentMethod.CASH),
             )
-            self.assertRedirects(response, reverse("store:order-history"))
+            latest_order = Order.objects.filter(
+                user=self.user, status=Order.Status.PLACED
+            ).latest("created_at")
+            self.assertRedirects(
+                response,
+                reverse("store:order-confirmation", kwargs={"reference": latest_order.reference}),
+            )
 
         self.assertEqual(
             Order.objects.filter(user=self.user, status=Order.Status.PLACED).count(),

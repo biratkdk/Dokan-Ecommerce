@@ -457,6 +457,7 @@ class CheckoutForm(forms.Form):
         choices=Order.PaymentMethod.choices,
         widget=forms.RadioSelect,
     )
+    guest_email = forms.EmailField(required=False)
 
     ADDRESS_PLACEHOLDERS = {
         "full_name": "Full name",
@@ -479,8 +480,9 @@ class CheckoutForm(forms.Form):
         "postal_code",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_guest: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.is_guest = is_guest
         if not is_stripe_enabled():
             self.fields["payment_method"].choices = [
                 choice
@@ -494,9 +496,15 @@ class CheckoutForm(forms.Form):
                     placeholder=placeholder,
                 )
         _apply_input_style(self.fields["coupon_code"], placeholder="Coupon code")
+        if is_guest:
+            _apply_input_style(self.fields["guest_email"], placeholder="you@example.com")
+        else:
+            del self.fields["guest_email"]
 
     def clean(self):
         cleaned_data = super().clean()
+        if self.is_guest and not cleaned_data.get("guest_email"):
+            self.add_error("guest_email", "Enter an email address for your order receipt.")
         self._validate_address_block(cleaned_data, "shipping", "use_default_shipping")
         if not cleaned_data.get("same_billing_address"):
             self._validate_address_block(cleaned_data, "billing", "use_default_billing")

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse
 
+from .accounts import peek_cart_user
 from .intelligence import classify_customer
 from .models import CustomerProfile, Order, OrderStatusEvent, SupportThread
 from .permissions import (
@@ -68,7 +69,7 @@ def build_user_notifications(user, *, limit: int = 6) -> list[dict]:
 
 
 def cart_summary(request):
-    order = get_active_order(request.user)
+    order = get_active_order(peek_cart_user(request))
     segment = classify_customer(request.user) if request.user.is_authenticated else None
     can_manage_support = can_manage_support_threads(request.user)
     support_threads_count = 0

@@ -19,6 +19,28 @@
                         <div class="checkout-section-header">
                             <span class="checkout-step">1</span>
                             <div>
+                                <h3>Contact</h3>
+                                {% if is_guest_checkout %}
+                                    <p>Where should we send your receipt and order updates?</p>
+                                {% else %}
+                                    <p>Checking out as {{ request.user.username }} ({{ request.user.email }}).</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if is_guest_checkout %}
+                            <div class="form-grid">
+                                <div class="field-group field-group-wide">
+                                    {{ form.guest_email.label_tag }}{{ form.guest_email }}{{ form.guest_email.errors }}
+                                </div>
+                            </div>
+                            <p class="payment-note">Have an account? <a href="{% url 'store:login' %}?next={% url 'store:checkout' %}">Log in</a> to use saved addresses and track this order later.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="checkout-section">
+                        <div class="checkout-section-header">
+                            <span class="checkout-step">2</span>
+                            <div>
                                 <h3>Shipping Address</h3>
                                 <p>Where should we send your order?</p>
                             </div>
@@ -50,7 +72,7 @@
 
                     <div class="checkout-section">
                         <div class="checkout-section-header">
-                            <span class="checkout-step">2</span>
+                            <span class="checkout-step">3</span>
                             <div>
                                 <h3>Billing Address</h3>
                                 <p>Where should the payment method be billed?</p>
@@ -90,7 +112,7 @@
 
                     <div class="checkout-section">
                         <div class="checkout-section-header">
-                            <span class="checkout-step">3</span>
+                            <span class="checkout-step">4</span>
                             <div>
                                 <h3>Order Options</h3>
                                 <p>Have a coupon or a note for us?</p>
@@ -104,7 +126,7 @@
 
                     <div class="checkout-section">
                         <div class="checkout-section-header">
-                            <span class="checkout-step">4</span>
+                            <span class="checkout-step">5</span>
                             <div>
                                 <h3>Payment Preference</h3>
                                 <p>Choose how you'd like to pay.</p>

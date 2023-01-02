@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import secrets
+import uuid
 
+from django.contrib.auth import get_user_model
 from django.core import signing
 from django.db import transaction
 from django.utils import timezone
@@ -16,10 +18,52 @@ EMAIL_OTP_LENGTH = 6
 EMAIL_OTP_TTL_SECONDS = 60 * 10
 EMAIL_OTP_MAX_ATTEMPTS = 5
 
+GUEST_SESSION_KEY = "guest_user_id"
+
 
 def ensure_customer_profile(user) -> CustomerProfile:
     profile, _ = CustomerProfile.objects.get_or_create(user=user)
     return profile
+
+
+def is_guest_user(user) -> bool:
+    """A guest checkout user is a real User row with no usable password.
+
+    Real signups always go through SignUpForm, which sets a real password,
+    so this is a safe way to tell guest carts apart without a schema change.
+    """
+    return bool(user and user.is_authenticated and not user.has_usable_password())
+
+
+def peek_cart_user(request):
+    """Resolve the user who owns the cart without creating a guest row.
+
+    Safe to call on every page load (e.g. for the cart badge count) since
+    it never writes to the database.
+    """
+    if request.user.is_authenticated:
+        return request.user
+    guest_id = request.session.get(GUEST_SESSION_KEY)
+    if not guest_id:
+        return None
+    User = get_user_model()
+    return User.objects.filter(pk=guest_id).first()
+
+
+def get_or_create_cart_user(request):
+    """Resolve the user who owns the cart, creating an unusable-password
+    guest account on first use if the visitor isn't logged in."""
+    existing = peek_cart_user(request)
+    if existing:
+        return existing
+
+    User = get_user_model()
+    guest = User(username=f"guest-{uuid.uuid4().hex[:16]}")
+    guest.set_unusable_password()
+    guest.save()
+    ensure_customer_profile(guest)
+    request.session[GUEST_SESSION_KEY] = guest.pk
+    return guest
 
 
 def is_email_verified(user) -> bool:

@@ -16,7 +16,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied, ValidationError
 from django.db.models import Count, Q
 from django.db.models.functions import Coalesce
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -27,8 +27,11 @@ from django.views.generic import DetailView, FormView, ListView, TemplateView, V
 
 from .accounts import (
     ensure_customer_profile,
+    get_or_create_cart_user,
+    is_guest_user,
     mark_email_unverified,
     mark_email_verified,
+    peek_cart_user,
     record_login_activity,
     resolve_email_verification_token,
     verify_email_code,
@@ -356,12 +359,22 @@ class ProductDetailView(DetailView):
         return context
 
 
-class CartView(LoginRequiredMixin, TemplateView):
+class CartAccessMixin:
+    """Like LoginRequiredMixin, but resolves a guest cart owner instead of
+    forcing login. Cart-eligible views use self.cart_user, not request.user,
+    for anything cart/order related."""
+
+    def dispatch(self, request, *args, **kwargs):
+        self.cart_user = get_or_create_cart_user(request)
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CartView(CartAccessMixin, TemplateView):
     template_name = "cart.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        order = get_active_order(self.request.user)
+        order = get_active_order(self.cart_user)
         context["order"] = order
         context["coupon_form"] = ApplyCouponForm()
         context["recommended_entries"] = recommend_for_order(order, limit=4) if order else []
@@ -737,17 +750,22 @@ class InventoryTransferView(InventoryManagementMixin, View):
         )
 
 
-class CheckoutView(LoginRequiredMixin, FormView):
+class CheckoutView(CartAccessMixin, FormView):
     template_name = "checkout.html"
     form_class = CheckoutForm
-    success_url = reverse_lazy("store:order-history")
 
     def dispatch(self, request, *args, **kwargs):
-        self.order = get_active_order(request.user)
+        self.cart_user = get_or_create_cart_user(request)
+        self.order = get_active_order(self.cart_user)
         if not self.order or not self.order.items.exists():
             messages.info(request, "Your cart is empty. Add products before checkout.")
             return redirect("store:catalog")
-        return super().dispatch(request, *args, **kwargs)
+        return super(CartAccessMixin, self).dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["is_guest"] = is_guest_user(self.cart_user)
+        return kwargs
 
     def get_initial(self):
         initial = super().get_initial()
@@ -762,11 +780,12 @@ class CheckoutView(LoginRequiredMixin, FormView):
                 "order": self.order,
                 "stripe_enabled": is_stripe_enabled(),
                 "checkout_token": uuid.uuid4().hex,
-                "default_shipping_address": self.request.user.addresses.filter(
+                "is_guest_checkout": is_guest_user(self.cart_user),
+                "default_shipping_address": self.cart_user.addresses.filter(
                     address_type=Address.AddressType.SHIPPING,
                     default=True,
                 ).first(),
-                "default_billing_address": self.request.user.addresses.filter(
+                "default_billing_address": self.cart_user.addresses.filter(
                     address_type=Address.AddressType.BILLING,
                     default=True,
                 ).first(),
@@ -774,11 +793,20 @@ class CheckoutView(LoginRequiredMixin, FormView):
         )
         return context
 
+    def get_success_url(self):
+        return reverse("store:order-confirmation", kwargs={"reference": self.order.reference})
+
     def form_valid(self, form):
         payment_method = form.cleaned_data["payment_method"]
         pending_order = None
 
         try:
+            if is_guest_user(self.cart_user):
+                guest_email = form.cleaned_data.get("guest_email", "").strip()
+                if self.cart_user.email != guest_email:
+                    self.cart_user.email = guest_email
+                    self.cart_user.save(update_fields=["email"])
+
             coupon_code = form.cleaned_data.get("coupon_code", "").strip()
             if coupon_code:
                 apply_coupon_to_order(self.order, coupon_code)
@@ -877,7 +905,7 @@ class CheckoutView(LoginRequiredMixin, FormView):
         save_default_key: str,
     ) -> Address:
         if form.cleaned_data[use_default_key]:
-            address = self.request.user.addresses.filter(
+            address = self.cart_user.addresses.filter(
                 address_type=address_type,
                 default=True,
             ).first()
@@ -888,12 +916,12 @@ class CheckoutView(LoginRequiredMixin, FormView):
         payload = self._address_payload(form.cleaned_data, prefix)
         save_as_default = form.cleaned_data[save_default_key]
         if save_as_default:
-            self.request.user.addresses.filter(
+            self.cart_user.addresses.filter(
                 address_type=address_type,
                 default=True,
             ).update(default=False)
         return Address.objects.create(
-            user=self.request.user,
+            user=self.cart_user,
             address_type=address_type,
             default=save_as_default,
             **payload,
@@ -906,12 +934,12 @@ class CheckoutView(LoginRequiredMixin, FormView):
         save_as_default: bool,
     ) -> Address:
         if save_as_default:
-            self.request.user.addresses.filter(
+            self.cart_user.addresses.filter(
                 address_type=address_type,
                 default=True,
             ).update(default=False)
         return Address.objects.create(
-            user=self.request.user,
+            user=self.cart_user,
             full_name=source.full_name,
             phone_number=source.phone_number,
             street_address=source.street_address,
@@ -938,34 +966,37 @@ class CheckoutView(LoginRequiredMixin, FormView):
         }
 
 
-class StripeCheckoutSuccessView(LoginRequiredMixin, View):
+class StripeCheckoutSuccessView(View):
     def get(self, request: HttpRequest) -> HttpResponse:
         session_id = request.GET.get("session_id", "").strip()
         if not session_id:
             messages.error(request, "Stripe did not return a checkout session reference.")
-            return redirect("store:order-history")
+            return redirect("store:home")
 
+        cart_user = peek_cart_user(request)
         order = (
-            Order.objects.filter(user=request.user, payment_session_id=session_id)
+            Order.objects.filter(user=cart_user, payment_session_id=session_id)
             .prefetch_related("items__item", "status_events")
             .first()
+            if cart_user
+            else None
         )
         if not order:
             messages.error(request, "The checkout session could not be matched to an order.")
-            return redirect("store:order-history")
+            return redirect("store:home")
 
         try:
             session = retrieve_stripe_checkout_session(session_id)
             session_payload = stripe_object_to_payload(session)
         except ImproperlyConfigured as exc:
             messages.error(request, str(exc))
-            return redirect("store:order-history")
+            return redirect("store:order-confirmation", reference=order.reference)
         except Exception:
             messages.info(
                 request,
-                "Payment confirmation is still processing. Refresh your order history shortly.",
+                "Payment confirmation is still processing. Refresh this page shortly.",
             )
-            return redirect("store:order-history")
+            return redirect("store:order-confirmation", reference=order.reference)
 
         if session_payload.get("payment_status") == "paid":
             try:
@@ -987,18 +1018,39 @@ class StripeCheckoutSuccessView(LoginRequiredMixin, View):
         else:
             messages.info(
                 request,
-                "Stripe is still finalizing your payment. Check order history again shortly.",
+                "Stripe is still finalizing your payment. Refresh this page shortly.",
             )
-        return redirect("store:order-history")
+        return redirect("store:order-confirmation", reference=order.reference)
 
 
-class StripeCheckoutCancelView(LoginRequiredMixin, View):
+class OrderConfirmationView(View):
     def get(self, request: HttpRequest, reference: str) -> HttpResponse:
-        order = get_object_or_404(Order.objects.filter(user=request.user), reference=reference)
+        cart_user = peek_cart_user(request)
+        order = (
+            Order.objects.filter(reference=reference, user=cart_user)
+            .exclude(status=Order.Status.CART)
+            .prefetch_related("items__item", "status_events")
+            .first()
+            if cart_user
+            else None
+        )
+        if not order:
+            raise Http404("Order not found.")
+        return render(
+            request,
+            "order_confirmation.html",
+            {"order": order, "is_guest_checkout": is_guest_user(cart_user)},
+        )
+
+
+class StripeCheckoutCancelView(View):
+    def get(self, request: HttpRequest, reference: str) -> HttpResponse:
+        cart_user = peek_cart_user(request)
+        order = get_object_or_404(Order.objects.filter(user=cart_user), reference=reference)
         order = reopen_order_for_checkout(
             order,
             reason="Stripe payment was cancelled. Your cart is ready for checkout again.",
-            actor=request.user.username,
+            actor=cart_user.username,
             payment_status=Order.PaymentStatus.UNPAID,
             payment_payload={"cancelled_at": timezone.now().isoformat()},
         )
@@ -1007,7 +1059,7 @@ class StripeCheckoutCancelView(LoginRequiredMixin, View):
             return redirect("store:checkout")
 
         messages.info(request, "This order is no longer awaiting Stripe payment.")
-        return redirect("store:order-history")
+        return redirect("store:order-confirmation", reference=order.reference)
 
 
 LOGIN_MAX_ATTEMPTS = 5
@@ -1113,7 +1165,7 @@ class VerifyEmailOtpView(LoginRequiredMixin, View):
         )
 
 
-class AddToCartView(LoginRequiredMixin, View):
+class AddToCartView(CartAccessMixin, View):
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
         item = get_object_or_404(Item.objects.active(), slug=slug)
         form = AddToCartForm(request.POST)
@@ -1123,7 +1175,7 @@ class AddToCartView(LoginRequiredMixin, View):
 
         try:
             order_item = add_item_to_cart(
-                request.user,
+                self.cart_user,
                 item,
                 form.cleaned_data["quantity"],
             )
@@ -1138,10 +1190,10 @@ class AddToCartView(LoginRequiredMixin, View):
         return redirect(safe_redirect_target(request, request.POST.get("next"), reverse("store:cart")))
 
 
-class ApplyCouponView(LoginRequiredMixin, View):
+class ApplyCouponView(CartAccessMixin, View):
     def post(self, request: HttpRequest) -> HttpResponse:
         form = ApplyCouponForm(request.POST)
-        order = get_active_order(request.user)
+        order = get_active_order(self.cart_user)
         if not order:
             messages.info(request, "You do not have an active cart.")
             return redirect("store:cart")
@@ -1352,12 +1404,12 @@ class ResolveSupportThreadView(LoginRequiredMixin, View):
         return redirect(safe_redirect_target(request, next_url, default_url))
 
 
-class RemoveFromCartView(LoginRequiredMixin, View):
+class RemoveFromCartView(CartAccessMixin, View):
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
         # Deliberately not .active() -- a customer must be able to remove or
         # decrease an item that's since been deactivated/discontinued.
         item = get_object_or_404(Item, slug=slug)
-        removed = remove_item_from_cart(request.user, item)
+        removed = remove_item_from_cart(self.cart_user, item)
         if removed:
             messages.info(request, f"{item.title} was removed from your cart.")
         else:
@@ -1365,10 +1417,10 @@ class RemoveFromCartView(LoginRequiredMixin, View):
         return redirect("store:cart")
 
 
-class DecreaseCartItemView(LoginRequiredMixin, View):
+class DecreaseCartItemView(CartAccessMixin, View):
     def post(self, request: HttpRequest, slug: str) -> HttpResponse:
         item = get_object_or_404(Item, slug=slug)
-        order_item = decrease_item_quantity(request.user, item)
+        order_item = decrease_item_quantity(self.cart_user, item)
         if order_item:
             messages.success(
                 request,

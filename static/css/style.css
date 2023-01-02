@@ -2155,6 +2155,40 @@ form a {
     margin-bottom: 50px;
 }
 
+.confirmation-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.confirmation-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--good-soft, #e1f4ea);
+    color: var(--good, #1a7f4d);
+    font-size: 28px;
+    margin-bottom: 16px;
+}
+
+.confirmation-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 32px 0 60px;
+    text-align: center;
+}
+
+.confirmation-actions p {
+    width: 100%;
+    color: #767676;
+    font-size: 14px;
+}
+
 .history-header {
     display: flex;
     justify-content: space-between;

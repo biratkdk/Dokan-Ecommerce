@@ -1604,3 +1604,99 @@ class RoleAccessTests(TestCase):
 
         self.assertEqual(inventory_response.status_code, 403)
         self.assertEqual(operations_response.status_code, 403)
+
+
+class GuestCheckoutTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.get(slug="footwear")
+        self.brand = Brand.objects.get(slug="hrx")
+        self.item = Item.objects.create(
+            title="Guest Runner",
+            slug="guest-runner",
+            sku="RS-GUEST-001",
+            category=Item.Department.FOOTWEAR,
+            catalog_category=self.category,
+            brand=self.brand,
+            label=Item.ProductLabel.NEW,
+            price=Decimal("80.00"),
+            short_description="Guest checkout test shoe.",
+            description="Test item for guest checkout coverage.",
+            stock=10,
+        )
+
+    def _checkout_payload(self, **overrides) -> dict:
+        payload = {
+            "guest_email": "guest@example.com",
+            "shipping_full_name": "Guest Shopper",
+            "shipping_phone_number": "9800000000",
+            "shipping_street_address": "Boudha Road",
+            "shipping_apartment_address": "",
+            "shipping_city": "Kathmandu",
+            "shipping_state": "Bagmati",
+            "shipping_country": "Nepal",
+            "shipping_postal_code": "44600",
+            "same_billing_address": "on",
+            "payment_method": Order.PaymentMethod.CASH,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_anonymous_visitor_can_add_to_cart_without_login(self):
+        response = self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        order = Order.objects.get(status=Order.Status.CART)
+        self.assertFalse(order.user.has_usable_password())
+        self.assertEqual(order.total_items, 1)
+
+    def test_guest_checkout_places_order_with_email_and_confirmation_page(self):
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1},
+        )
+
+        response = self.client.post(reverse("store:checkout"), self._checkout_payload())
+
+        order = Order.objects.get(status=Order.Status.PLACED)
+        self.assertEqual(order.user.email, "guest@example.com")
+        self.assertFalse(order.user.has_usable_password())
+        self.assertRedirects(
+            response,
+            reverse("store:order-confirmation", kwargs={"reference": order.reference}),
+        )
+
+        confirmation_response = self.client.get(
+            reverse("store:order-confirmation", kwargs={"reference": order.reference})
+        )
+        self.assertEqual(confirmation_response.status_code, 200)
+        self.assertContains(confirmation_response, "order is confirmed")
+
+    def test_guest_checkout_requires_email(self):
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1},
+        )
+
+        response = self.client.post(
+            reverse("store:checkout"),
+            self._checkout_payload(guest_email=""),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Order.objects.filter(status=Order.Status.PLACED).exists())
+
+    def test_stranger_cannot_view_someone_elses_order_confirmation(self):
+        self.client.post(
+            reverse("store:add-to-cart", kwargs={"slug": self.item.slug}),
+            {"quantity": 1},
+        )
+        self.client.post(reverse("store:checkout"), self._checkout_payload())
+        order = Order.objects.get(status=Order.Status.PLACED)
+
+        other_client_response = self.client_class().get(
+            reverse("store:order-confirmation", kwargs={"reference": order.reference})
+        )
+        self.assertEqual(other_client_response.status_code, 404)

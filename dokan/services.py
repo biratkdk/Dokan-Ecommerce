@@ -37,7 +37,7 @@ DEFAULT_WAREHOUSE_CODE = "CENTRAL"
 
 
 def get_active_order(user):
-    if not user.is_authenticated:
+    if not user or not user.is_authenticated:
         return None
     return (
         Order.objects.filter(user=user, status=Order.Status.CART)

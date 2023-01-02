@@ -73,6 +73,7 @@ urlpatterns = [
     path("checkout/", views.CheckoutView.as_view(), name="checkout"),
     path("checkout/success/", views.StripeCheckoutSuccessView.as_view(), name="payment-success"),
     path("checkout/cancel/<str:reference>/", views.StripeCheckoutCancelView.as_view(), name="payment-cancel"),
+    path("orders/<str:reference>/confirmation/", views.OrderConfirmationView.as_view(), name="order-confirmation"),
     path("compare/", views.CompareView.as_view(), name="compare"),
     path("wishlist/", views.WishlistView.as_view(), name="wishlist"),
     path("wishlist/toggle/<slug:slug>/", views.ToggleWishlistView.as_view(), name="toggle-wishlist"),

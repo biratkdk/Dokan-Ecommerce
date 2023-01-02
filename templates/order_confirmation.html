@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmed | Redstore{% endblock %}
+
+{% block content %}
+    <div class="small-container">
+        <div class="confirmation-header">
+            <span class="confirmation-check">&#10003;</span>
+            <h2 class="title">Thanks, your order is confirmed</h2>
+            <p class="section-sub">Order <strong>{{ order.reference }}</strong> &middot; a receipt was sent to {{ order.user.email }}.</p>
+        </div>
+
+        <div class="history-card">
+            <div class="history-header">
+                <div>
+                    <h3>{{ order.reference }}</h3>
+                    <span class="order-status-badge order-status-{{ order.status }}">{{ order.get_status_display }}</span>
+                    <p class="order-meta-line">{{ order.get_payment_method_display }} &middot; {{ order.get_payment_status_display }}</p>
+                </div>
+                <strong>${{ order.total|floatformat:2 }}</strong>
+            </div>
+            <p>Estimated delivery: {{ order.estimated_delivery_days }} days</p>
+
+            <ul class="summary-list">
+                {% for order_item in order.items.all %}
+                    <li>
+                        <span>{{ order_item.item.title }} x {{ order_item.quantity }}</span>
+                        <strong>${{ order_item.total_price|floatformat:2 }}</strong>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <div class="order-tracking">
+                <p class="order-tracking-title">Order Tracking</p>
+                <div class="tracking-timeline">
+                    {% for event in order.status_events.all %}
+                        <div class="tracking-step {% if forloop.last %}tracking-step-current{% endif %}">
+                            <span class="tracking-dot"></span>
+                            <div class="tracking-step-body">
+                                <strong>{{ event.get_status_display }}</strong>
+                                <span class="tracking-timestamp">{{ event.created_at|date:"M j, Y g:i A" }}</span>
+                                {% if event.note %}<p>{{ event.note }}</p>{% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="confirmation-actions">
+            {% if is_guest_checkout %}
+                <p>Create a free account with this email to track future orders in one place.</p>
+                <a href="{% url 'store:signup' %}" class="btn">Create Account</a>
+            {% else %}
+                <a href="{% url 'store:order-history' %}" class="btn btn-outline">View All Orders</a>
+            {% endif %}
+            <a href="{% url 'store:catalog' %}" class="btn">Continue Shopping</a>
+        </div>
+    </div>
+{% endblock %}
